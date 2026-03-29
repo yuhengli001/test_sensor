@@ -1,0 +1,9 @@
+build/
+Debug/
+Release/
+cortex_m33_gcc/
+mx.scratch
+.settings
+.vscode
+.clangd
+.DS_Store
