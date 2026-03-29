@@ -81,212 +81,9 @@ void HAL_MspInit(void)
 
   /* System interrupt init*/
 
-  /* Peripheral interrupt init */
-  /* RCC_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(RCC_IRQn, 1, 0);
-  HAL_NVIC_EnableIRQ(RCC_IRQn);
-  /* RADIO_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(RADIO_IRQn, RADIO_INTR_PRIO_LOW, 0);
-  HAL_NVIC_EnableIRQ(RADIO_IRQn);
-
   /* USER CODE BEGIN MspInit 1 */
 
   /* USER CODE END MspInit 1 */
-}
-
-/**
-  * @brief ADC MSP Initialization
-  * This function configures the hardware resources used in this example
-  * @param hadc: ADC handle pointer
-  * @retval None
-  */
-void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
-{
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-  if(hadc->Instance==ADC4)
-  {
-    /* USER CODE BEGIN ADC4_MspInit 0 */
-
-    /* USER CODE END ADC4_MspInit 0 */
-
-    /** Initializes the peripherals clock
-    */
-    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-    PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_HCLK;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    /* Peripheral clock enable */
-    __HAL_RCC_ADC4_CLK_ENABLE();
-    /* USER CODE BEGIN ADC4_MspInit 1 */
-
-    /* USER CODE END ADC4_MspInit 1 */
-
-  }
-
-}
-
-/**
-  * @brief ADC MSP De-Initialization
-  * This function freeze the hardware resources used in this example
-  * @param hadc: ADC handle pointer
-  * @retval None
-  */
-void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
-{
-  if(hadc->Instance==ADC4)
-  {
-    /* USER CODE BEGIN ADC4_MspDeInit 0 */
-
-    /* USER CODE END ADC4_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_ADC4_CLK_DISABLE();
-    /* USER CODE BEGIN ADC4_MspDeInit 1 */
-
-    /* USER CODE END ADC4_MspDeInit 1 */
-  }
-
-}
-
-/**
-  * @brief CRC MSP Initialization
-  * This function configures the hardware resources used in this example
-  * @param hcrc: CRC handle pointer
-  * @retval None
-  */
-void HAL_CRC_MspInit(CRC_HandleTypeDef* hcrc)
-{
-  if(hcrc->Instance==CRC)
-  {
-    /* USER CODE BEGIN CRC_MspInit 0 */
-
-    /* USER CODE END CRC_MspInit 0 */
-    /* Peripheral clock enable */
-    __HAL_RCC_CRC_CLK_ENABLE();
-    /* USER CODE BEGIN CRC_MspInit 1 */
-
-    /* USER CODE END CRC_MspInit 1 */
-
-  }
-
-}
-
-/**
-  * @brief CRC MSP De-Initialization
-  * This function freeze the hardware resources used in this example
-  * @param hcrc: CRC handle pointer
-  * @retval None
-  */
-void HAL_CRC_MspDeInit(CRC_HandleTypeDef* hcrc)
-{
-  if(hcrc->Instance==CRC)
-  {
-    /* USER CODE BEGIN CRC_MspDeInit 0 */
-
-    /* USER CODE END CRC_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_CRC_CLK_DISABLE();
-    /* USER CODE BEGIN CRC_MspDeInit 1 */
-
-    /* USER CODE END CRC_MspDeInit 1 */
-  }
-
-}
-
-/**
-  * @brief RAMCFG MSP Initialization
-  * This function configures the hardware resources used in this example
-  * @param hramcfg: RAMCFG handle pointer
-  * @retval None
-  */
-void HAL_RAMCFG_MspInit(RAMCFG_HandleTypeDef* hramcfg)
-{
-    /* USER CODE BEGIN RAMCFG_MspInit 0 */
-
-    /* USER CODE END RAMCFG_MspInit 0 */
-    /* Peripheral clock enable */
-    __HAL_RCC_RAMCFG_CLK_ENABLE();
-    /* USER CODE BEGIN RAMCFG_MspInit 1 */
-
-    /* USER CODE END RAMCFG_MspInit 1 */
-
-}
-
-/**
-  * @brief RAMCFG MSP De-Initialization
-  * This function freeze the hardware resources used in this example
-  * @param hramcfg: RAMCFG handle pointer
-  * @retval None
-  */
-void HAL_RAMCFG_MspDeInit(RAMCFG_HandleTypeDef* hramcfg)
-{
-    /* USER CODE BEGIN RAMCFG_MspDeInit 0 */
-
-    /* USER CODE END RAMCFG_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_RAMCFG_CLK_DISABLE();
-    /* USER CODE BEGIN RAMCFG_MspDeInit 1 */
-
-    /* USER CODE END RAMCFG_MspDeInit 1 */
-
-}
-
-/**
-  * @brief RNG MSP Initialization
-  * This function configures the hardware resources used in this example
-  * @param hrng: RNG handle pointer
-  * @retval None
-  */
-void HAL_RNG_MspInit(RNG_HandleTypeDef* hrng)
-{
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-  if(hrng->Instance==RNG)
-  {
-    /* USER CODE BEGIN RNG_MspInit 0 */
-
-    /* USER CODE END RNG_MspInit 0 */
-
-    /** Initializes the peripherals clock
-    */
-    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RNG;
-    PeriphClkInit.RngClockSelection = RCC_RNGCLKSOURCE_HSI;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    /* Peripheral clock enable */
-    __HAL_RCC_RNG_CLK_ENABLE();
-    /* USER CODE BEGIN RNG_MspInit 1 */
-
-    /* USER CODE END RNG_MspInit 1 */
-
-  }
-
-}
-
-/**
-  * @brief RNG MSP De-Initialization
-  * This function freeze the hardware resources used in this example
-  * @param hrng: RNG handle pointer
-  * @retval None
-  */
-void HAL_RNG_MspDeInit(RNG_HandleTypeDef* hrng)
-{
-  if(hrng->Instance==RNG)
-  {
-    /* USER CODE BEGIN RNG_MspDeInit 0 */
-
-    /* USER CODE END RNG_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_RNG_CLK_DISABLE();
-    /* USER CODE BEGIN RNG_MspDeInit 1 */
-
-    /* USER CODE END RNG_MspDeInit 1 */
-  }
-
 }
 
 /**
@@ -315,9 +112,6 @@ void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
 
     /* Peripheral clock enable */
     __HAL_RCC_RTCAPB_CLK_ENABLE();
-    /* RTC interrupt Init */
-    HAL_NVIC_SetPriority(RTC_IRQn, 4, 0);
-    HAL_NVIC_EnableIRQ(RTC_IRQn);
     /* USER CODE BEGIN RTC_MspInit 1 */
 
     /* USER CODE END RTC_MspInit 1 */
@@ -341,9 +135,6 @@ void HAL_RTC_MspDeInit(RTC_HandleTypeDef* hrtc)
     /* USER CODE END RTC_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_RTCAPB_CLK_DISABLE();
-
-    /* RTC interrupt DeInit */
-    HAL_NVIC_DisableIRQ(RTC_IRQn);
     /* USER CODE BEGIN RTC_MspDeInit 1 */
 
     /* USER CODE END RTC_MspDeInit 1 */

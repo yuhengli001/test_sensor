@@ -20,17 +20,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32wbaxx_it.h"
-#include "app_conf.h"
-#include "ll_sys.h"
-#include "stm32wbaxx_hal.h"
-#include "scm.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
-
-/* External functions --------------------------------------------------------*/
-extern void (*radio_callback)(void);
-extern void (*low_isr_callback)(void);
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
@@ -63,8 +55,6 @@ extern void (*low_isr_callback)(void);
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern volatile uint8_t radio_sw_low_isr_is_running_high_prio;
-extern RTC_HandleTypeDef hrtc;
 extern DMA_NodeTypeDef Node_GPDMA1_Channel1;
 extern DMA_QListTypeDef List_GPDMA1_Channel1;
 extern DMA_HandleTypeDef handle_GPDMA1_Channel1;
@@ -215,51 +205,6 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles RTC non-secure interrupt.
-  */
-void RTC_IRQHandler(void)
-{
-  /* USER CODE BEGIN RTC_IRQn 0 */
-
-  /* USER CODE END RTC_IRQn 0 */
-  HAL_RTC_AlarmIRQHandler(&hrtc);
-  HAL_RTCEx_SSRUIRQHandler(&hrtc);
-  /* USER CODE BEGIN RTC_IRQn 1 */
-
-  /* USER CODE END RTC_IRQn 1 */
-}
-
-/**
-  * @brief This function handles RCC non-secure global interrupt.
-  */
-void RCC_IRQHandler(void)
-{
-  /* USER CODE BEGIN RCC_IRQn 0 */
-
-  /* USER CODE END RCC_IRQn 0 */
-  /* Check the RCC interrupt source */
-  if(__HAL_RCC_GET_IT(RCC_IT_HSERDY))
-  {
-    __HAL_RCC_CLEAR_IT(RCC_IT_HSERDY);
-#if (CFG_SCM_SUPPORTED == 1)
-    /* SCM HSE BEGIN */
-    SCM_HSE_StartStabilizationTimer();
-    /* SCM HSE END */
-#endif /* CFG_SCM_SUPPORTED */
-  }
-  else if(__HAL_RCC_GET_IT(RCC_IT_PLL1RDY))
-  {
-    __HAL_RCC_CLEAR_IT(RCC_IT_PLL1RDY);
-#if (CFG_SCM_SUPPORTED == 1)
-    scm_pllrdy_isr();
-#endif /* CFG_SCM_SUPPORTED */
-  }
-  /* USER CODE BEGIN RCC_IRQn 1 */
-
-  /* USER CODE END RCC_IRQn 1 */
-}
-
-/**
   * @brief This function handles EXTI Line2 interrupt.
   */
 void EXTI2_IRQHandler(void)
@@ -341,84 +286,6 @@ void USART1_IRQHandler(void)
   /* USER CODE BEGIN USART1_IRQn 1 */
 
   /* USER CODE END USART1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles TIM16 global interrupt.
-  */
-void TIM16_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM16_IRQn 0 */
-
-  /* USER CODE END TIM16_IRQn 0 */
-  /* Check whether update interrupt is pending */
-  if(LL_TIM_IsActiveFlag_UPDATE(TIM16) == 1)
-  {
-    /* Clear the update interrupt flag */
-    LL_TIM_ClearFlag_UPDATE(TIM16);
-
-#if (CFG_SCM_SUPPORTED == 1)
-    /* SCM HSE BEGIN */
-    /* Update interrupt processing */
-    SCM_HSE_SW_HSERDY_isr();
-    /* SCM HSE END */
-#endif /* CFG_SCM_SUPPORTED */
-  }
-  /* USER CODE BEGIN TIM16_IRQn 1 */
-
-  /* USER CODE END TIM16_IRQn 1 */
-}
-
-/**
-  * @brief This function handles 2.4GHz RADIO global interrupt.
-  */
-void RADIO_IRQHandler(void)
-{
-  /* USER CODE BEGIN RADIO_IRQn 0 */
-
-  /* USER CODE END RADIO_IRQn 0 */
-
-  if(NULL != radio_callback)
-  {
-    radio_callback();
-  }
-
-  LL_RCC_RADIO_DisableSleepTimerClock();
-  __ISB();
-
-  /* USER CODE BEGIN RADIO_IRQn 1 */
-
-  /* USER CODE END RADIO_IRQn 1 */
-}
-
-/**
-  * @brief This function handles HASH global interrupt.
-  */
-void HASH_IRQHandler(void)
-{
-  /* USER CODE BEGIN HASH_IRQn 0 */
-
-  /* USER CODE END HASH_IRQn 0 */
-
-  /* Disable SW radio low interrupt to prevent nested calls */
-  NVIC_DisableIRQ(RADIO_SW_LOW_INTR_NUM);
-
-  if(NULL != low_isr_callback) {
-    low_isr_callback();
-  }
-
-  /* Check if nested SW radio low interrupt has been requested*/
-  if(radio_sw_low_isr_is_running_high_prio != 0) {
-    HAL_NVIC_SetPriority((IRQn_Type) RADIO_SW_LOW_INTR_NUM, RADIO_INTR_PRIO_LOW, 0);
-    radio_sw_low_isr_is_running_high_prio = 0;
-  }
-
-  /* Re-enable SW radio low interrupt */
-  NVIC_EnableIRQ(RADIO_SW_LOW_INTR_NUM);
-
-  /* USER CODE BEGIN HASH_IRQn 1 */
-
-  /* USER CODE END HASH_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
