@@ -42,8 +42,8 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 typedef enum
 {
-  RADAR_SERVER_A121_DATA,
   RADAR_SERVER_A121_CONTROL,
+  RADAR_SERVER_A121_DATA,
   /* USER CODE BEGIN Service1_CharOpcode_t */
 
   /* USER CODE END Service1_CharOpcode_t */
@@ -52,7 +52,8 @@ typedef enum
 
 typedef enum
 {
-  RADAR_SERVER_A121_DATA_WRITE_EVT,
+  RADAR_SERVER_A121_CONTROL_READ_EVT,
+  RADAR_SERVER_A121_CONTROL_WRITE_NO_RESP_EVT,
   RADAR_SERVER_A121_DATA_NOTIFY_ENABLED_EVT,
   RADAR_SERVER_A121_DATA_NOTIFY_DISABLED_EVT,
   /* USER CODE BEGIN Service1_OpcodeEvt_t */

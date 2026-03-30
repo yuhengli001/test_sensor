@@ -71,6 +71,8 @@ void Error_Handler(void);
 void MX_RAMCFG_Init(void);
 void MX_RTC_Init(void);
 void MX_USART1_UART_Init(void);
+void MX_USART2_UART_Init(void);
+void MX_SPI2_Init(void);
 void MX_ADC4_Init(void);
 void MX_CRC_Init(void);
 void MX_RNG_Init(void);

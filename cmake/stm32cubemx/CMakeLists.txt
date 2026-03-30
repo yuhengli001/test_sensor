@@ -181,11 +181,14 @@ set(MX_LINK_DIRS
 )
 # Project static libraries
 set(MX_LINK_LIBS  
-	:WBA6_LinkLayer_BLE_Basic_lib.a 
 	:stm32wba_ble_stack_basic.a
+	:WBA6_LinkLayer_BLE_Basic_lib.a 
     STM32_Drivers
     ${TOOLCHAIN_LINK_LIBRARIES}
-    Utilities	STM32_WPAN	Common	
+    Utilities
+	STM32_WPAN
+	Common
+	
 )
 # Interface library for includes and symbols
 add_library(stm32cubemx INTERFACE)

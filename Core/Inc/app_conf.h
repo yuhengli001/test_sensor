@@ -366,7 +366,8 @@ typedef enum
   CFG_TASK_BLE_TIMER_BCKGND,
   CFG_TASK_FLASH_MANAGER,
   /* USER CODE BEGIN CFG_Task_Id_t */
-
+  CFG_TASK_ADV_CANCEL_ID,
+  CFG_TASK_SEND_RADAR_DATA_ID,
   /* USER CODE END CFG_Task_Id_t */
   CFG_TASK_NBR /* Shall be LAST in the list */
 } CFG_Task_Id_t;
@@ -518,7 +519,7 @@ typedef enum
 #define CFG_AMM_VIRTUAL_BLE_TIMERS                        (1U)
 #define CFG_AMM_VIRTUAL_BLE_TIMERS_BUFFER_SIZE     (400U)  /* words (32 bits) */
 #define CFG_AMM_VIRTUAL_BLE_EVENTS                        (2U)
-#define CFG_AMM_VIRTUAL_BLE_EVENTS_BUFFER_SIZE     (64U)  /* words (32 bits) */
+#define CFG_AMM_VIRTUAL_BLE_EVENTS_BUFFER_SIZE     (200U)  /* words (32 bits) */
 
 /* USER CODE BEGIN MEMORY_MANAGER_Configuration */
 

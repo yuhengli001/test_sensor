@@ -110,7 +110,10 @@ typedef struct
 
   APP_BLE_ConnStatus_t Device_Connection_Status;
   /* USER CODE BEGIN PTD_1 */
+  /* Advertising timeout timerID*/
+  UTIL_TIMER_Object_t Advertising_mgr_timer_Id;
 
+  uint8_t connIntervalFlag;
   /* USER CODE END PTD_1 */
 }BleApplicationContext_t;
 
@@ -134,6 +137,16 @@ typedef struct
 #define BLE_DEFAULT_PIN            (111111) /* Default PIN code for pairing */
 
 /* USER CODE BEGIN PD */
+#define ADV_TIMEOUT_MS                 (60 * 1000)
+/* Device Info Characteristic UUID */
+#define COPY_UUID_128(uuid_struct, uuid_15, uuid_14, uuid_13, uuid_12, uuid_11, uuid_10, uuid_9, uuid_8, uuid_7, uuid_6, uuid_5, uuid_4, uuid_3, uuid_2, uuid_1, uuid_0) \
+do {\
+    uuid_struct[0] = uuid_0; uuid_struct[1] = uuid_1; uuid_struct[2] = uuid_2; uuid_struct[3] = uuid_3; \
+    uuid_struct[4] = uuid_4; uuid_struct[5] = uuid_5; uuid_struct[6] = uuid_6; uuid_struct[7] = uuid_7; \
+    uuid_struct[8] = uuid_8; uuid_struct[9] = uuid_9; uuid_struct[10] = uuid_10; uuid_struct[11] = uuid_11; \
+    uuid_struct[12] = uuid_12; uuid_struct[13] = uuid_13; uuid_struct[14] = uuid_14; uuid_struct[15] = uuid_15; \
+}while(0)
+#define COPY_DEVINFO_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x31,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
 
 /* USER CODE END PD */
 
@@ -157,9 +170,9 @@ RADAR_SERVER_APP_ConnHandleNotEvt_t RADAR_SERVERHandleNotification;
 static char a_GapDeviceName[] = {  't', 'e', 's', 't', '_', 's', 'e', 'n', 's', 'o', 'r' }; /* Gap Device Name */
 
 /* Advertising Data */
-uint8_t a_AdvData[25] =
+uint8_t a_AdvData[27] =
 {
-  8, AD_TYPE_COMPLETE_LOCAL_NAME, 'p', '2', 'p', 'S', '_', 'X', 'X',  /* Complete name */
+  10, AD_TYPE_COMPLETE_LOCAL_NAME, 'r', 'a', 'd', 'a', 'r', 'S', '_', 'X', 'X',  /* Complete name */
   15, AD_TYPE_MANUFACTURER_SPECIFIC_DATA, 0x30, 0x00,
                                           0x00 /*  */,
                                           0x00 /*  */,
@@ -189,7 +202,7 @@ PLACE_IN_SECTION("TAG_HostStack") static uint8_t long_write_buffer[CFG_BLE_LONG_
 PLACE_IN_SECTION("TAG_HostStack") static uint8_t extra_data_buffer[CFG_BLE_EXTRA_DATA_BUF_SIZE];
 
 /* USER CODE BEGIN PV */
-
+uint8_t a_GATT_DevInfoData[22];
 /* USER CODE END PV */
 
 /* Global variables ----------------------------------------------------------*/
@@ -209,7 +222,10 @@ static const uint8_t* BleGenerateERValue(void);
 static void gap_cmd_resp_wait(void);
 static void gap_cmd_resp_release(void);
 /* USER CODE BEGIN PFP */
-
+static void Adv_Cancel_Req(void *arg);
+static void Adv_Cancel(void);
+static void Radar_Process_And_Send_Task(void);
+static void fill_advData(uint8_t *p_adv_data, uint8_t tab_size, const uint8_t*p_bd_addr);
 /* USER CODE END PFP */
 
 /* External functions prototypes ---------------------------------------------*/
@@ -228,7 +244,7 @@ static void gap_cmd_resp_release(void);
 void APP_BLE_Init(void)
 {
   /* USER CODE BEGIN APP_BLE_Init_1 */
-
+  tBleStatus ret;
   /* USER CODE END APP_BLE_Init_1 */
 
   LST_init_head(&BleAsynchEventQueue);
@@ -272,6 +288,19 @@ void APP_BLE_Init(void)
     /* From here, all initialization are BLE application specific */
 
     /* USER CODE BEGIN APP_BLE_Init_4 */
+    /* Register the Advertising Cancel task (keep this) */
+    UTIL_SEQ_RegTask(1 << CFG_TASK_ADV_CANCEL_ID, UTIL_SEQ_RFU, Adv_Cancel);
+
+    /* --- NEW: Register your Radar Data task --- */
+    /* This tells the system: "When CFG_TASK_SEND_RADAR_DATA_ID is triggered, run Radar_Process_And_Send_Task" */
+    UTIL_SEQ_RegTask(1 << CFG_TASK_SEND_RADAR_DATA_ID, UTIL_SEQ_RFU, Radar_Process_And_Send_Task);
+
+    /* Create timer to handle the Advertising Stop (keep this) */
+    UTIL_TIMER_Create(&(bleAppContext.Advertising_mgr_timer_Id),
+                      0,
+                      UTIL_TIMER_ONESHOT,
+                      &Adv_Cancel_Req,
+                      0);
 
     /* USER CODE END APP_BLE_Init_4 */
 
@@ -283,12 +312,26 @@ void APP_BLE_Init(void)
     LOG_INFO_APP("\n");
 
     /* USER CODE BEGIN APP_BLE_Init_3 */
+    ret = aci_hal_set_radio_activity_mask(0x0006);
+    if (ret != BLE_STATUS_SUCCESS)
+    {
+      LOG_INFO_APP("  Fail   : aci_hal_set_radio_activity_mask command, result: 0x%2X\n", ret);
+    }
+    else
+    {
+      LOG_INFO_APP("  Success: aci_hal_set_radio_activity_mask command\n\r");
+    }
 
+    /* Start to Advertise to accept a connection */
+    APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
+
+    /* Start a timer to stop advertising after a while */
+    UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
     /* USER CODE END APP_BLE_Init_3 */
 
   }
   /* USER CODE BEGIN APP_BLE_Init_2 */
-
+bleAppContext.connIntervalFlag = 0;
   /* USER CODE END APP_BLE_Init_2 */
 
   return;
@@ -359,7 +402,12 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
                     p_disconnection_complete_event->Reason);
 
         /* USER CODE BEGIN EVT_DISCONN_COMPLETE_2 */
-
+        /* Restart advertising immediately on disconnect */
+        APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
+          
+        /* OPTIONAL: Comment out the timer if you want it to advertise forever 
+            until the battery dies or a phone connects. */
+        // UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
         /* USER CODE END EVT_DISCONN_COMPLETE_2 */
       }
       gap_cmd_resp_release();
@@ -469,7 +517,8 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           RADAR_SERVERHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
           RADAR_SERVER_APP_EvtRx(&RADAR_SERVERHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
-
+          /* The connection is done, there is no need anymore to schedule the LP ADV */
+          UTIL_TIMER_Stop(&(bleAppContext.Advertising_mgr_timer_Id));
           /* USER CODE END HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
           break; /* HCI_LE_ENHANCED_CONNECTION_COMPLETE_SUBEVT_CODE */
         }
@@ -512,7 +561,8 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           RADAR_SERVERHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
           RADAR_SERVER_APP_EvtRx(&RADAR_SERVERHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_CONN_COMPLETE */
-
+          /* The connection is done, there is no need anymore to schedule the LP ADV */
+          UTIL_TIMER_Stop(&(bleAppContext.Advertising_mgr_timer_Id));
           /* USER CODE END HCI_EVT_LE_CONN_COMPLETE */
           break; /* HCI_LE_CONNECTION_COMPLETE_SUBEVT_CODE */
         }
@@ -928,7 +978,18 @@ void APP_BLE_Procedure_Gap_Peripheral(ProcGapPeripheralId_t ProcGapPeripheralId)
       paramD = 0x01F4;
 
       /* USER CODE BEGIN CONN_PARAM_UPDATE */
-
+      if (bleAppContext.connIntervalFlag != 0)
+      {
+        bleAppContext.connIntervalFlag = 0;
+        paramA = CONN_INT_MS(50);
+        paramB = CONN_INT_MS(50);
+      }
+      else
+      {
+        bleAppContext.connIntervalFlag = 1;
+        paramA = CONN_INT_MS(1000);
+        paramB = CONN_INT_MS(1000);
+      }
       /* USER CODE END CONN_PARAM_UPDATE */
       break;
     }/* PROC_GAP_PERIPH_CONN_PARAM_UPDATE */
@@ -1179,7 +1240,20 @@ static void Ble_Hci_Gap_Gatt_Init(void)
   tBleStatus ret;
 
   /* USER CODE BEGIN Ble_Hci_Gap_Gatt_Init */
+  /* Add number of record for Device Info Characteristic */
+  static const uint8_t p_additional_svc_record[1] = {0x03};
 
+  ret = aci_hal_write_config_data(CONFIG_DATA_GAP_ADD_REC_NBR_OFFSET,
+                                  CONFIG_DATA_GAP_ADD_REC_NBR_LEN,
+                                  (uint8_t*) p_additional_svc_record);
+  if (ret != BLE_STATUS_SUCCESS)
+    {
+      LOG_INFO_APP("  Fail   : aci_hal_write_config_data command - CONFIG_DATA_GAP_ADD_REC_NBR_OFFSET, result: 0x%02X\n", ret);
+    }
+    else
+    {
+      LOG_INFO_APP("  Success: aci_hal_write_config_data command - CONFIG_DATA_GAP_ADD_REC_NBR_OFFSET\n");
+    }
   /* USER CODE END Ble_Hci_Gap_Gatt_Init */
 
   LOG_INFO_APP("==>> Start Ble_Hci_Gap_Gatt_Init function\n");
@@ -1348,7 +1422,7 @@ static void Ble_Hci_Gap_Gatt_Init(void)
   bleAppContext.bleSecurityParam.encryptionKeySizeMax  = CFG_ENCRYPTION_KEY_SIZE_MAX;
   bleAppContext.bleSecurityParam.bonding_mode          = CFG_BONDING_MODE;
   /* USER CODE BEGIN Ble_Hci_Gap_Gatt_Init_1 */
-
+  fill_advData(&a_AdvData[0], sizeof(a_AdvData), (uint8_t*) p_bd_addr);
   /* USER CODE END Ble_Hci_Gap_Gatt_Init_1 */
 
   ret = aci_gap_set_authentication_requirement(bleAppContext.bleSecurityParam.bonding_mode,
@@ -1384,7 +1458,112 @@ static void Ble_Hci_Gap_Gatt_Init(void)
   }
 
   /* USER CODE BEGIN Ble_Hci_Gap_Gatt_Init_2 */
+/** Device Info Characteristic **/
+  /* Add a new characterisitc */
+  Char_UUID_t  uuid;
+  uint16_t gap_DevInfoChar_handle = 0U;
 
+  /* Add new characteristic to GAP service */
+  uint16_t SizeDeviceInfoChar = 22;
+  COPY_DEVINFO_UUID(uuid.Char_UUID_128);
+
+  ret = aci_gatt_add_char(gap_service_handle,
+                          UUID_TYPE_128,
+                          (Char_UUID_t *) &uuid,
+                          SizeDeviceInfoChar,
+                          CHAR_PROP_READ,
+                          ATTR_PERMISSION_NONE,
+                          GATT_DONT_NOTIFY_EVENTS,
+                          0x10,
+                          CHAR_VALUE_LEN_CONSTANT,
+                          &gap_DevInfoChar_handle);
+  if (ret != BLE_STATUS_SUCCESS)
+  {
+    LOG_INFO_APP("  Fail   : aci_gatt_add_char command : Device Info Char, error code: 0x%2X\n", ret);
+  }
+  else
+  {
+    LOG_INFO_APP("  Success: aci_gatt_add_char command : Device Info Char\n");
+  }
+
+  /**
+  * Initialize Device Info Characteristic
+  */
+  uint8_t * p_device_info_payload = (uint8_t*)a_GATT_DevInfoData;
+
+  LOG_INFO_APP("---------------------------------------------\n");
+  /* Device ID: WBA5x, WBA6x... */
+  a_GATT_DevInfoData[0] = (uint8_t)(LL_DBGMCU_GetDeviceID() & 0xff);
+  a_GATT_DevInfoData[1] = (uint8_t)((LL_DBGMCU_GetDeviceID() & 0xff00)>>8);
+  LOG_INFO_APP("-- DEVICE INFO CHAR : Device ID = 0x%02X %02X\n",a_GATT_DevInfoData[1],a_GATT_DevInfoData[0]);
+
+  /* Rev ID: RevA, RevB... */
+  a_GATT_DevInfoData[2] = (uint8_t)(LL_DBGMCU_GetRevisionID() & 0xff);
+  a_GATT_DevInfoData[3] = (uint8_t)((LL_DBGMCU_GetRevisionID() & 0xff00)>>8);
+  LOG_INFO_APP("-- DEVICE INFO CHAR : Revision ID = 0x%02X %02X\n",a_GATT_DevInfoData[3],a_GATT_DevInfoData[2]);
+
+  /* Board ID: Tell the phone this is your custom board, not a Nucleo! */
+  a_GATT_DevInfoData[4] = BOARD_ID_CUSTOM_RADAR; // Use 0xFF if you didn't define the enum
+  LOG_INFO_APP("-- DEVICE INFO CHAR : Board ID = 0x%02X\n", a_GATT_DevInfoData[4]);
+
+  /* HW Package: QFN32, QFN48... */
+  a_GATT_DevInfoData[5] = (uint8_t)LL_GetPackageType();
+  LOG_INFO_APP("-- DEVICE INFO CHAR : HW Package = 0x%02X\n",a_GATT_DevInfoData[5]);
+
+  /* FW version: v1.3.0, v1.4.0... */
+  a_GATT_DevInfoData[6] = CFG_FW_MAJOR_VERSION;
+  a_GATT_DevInfoData[7] = CFG_FW_MINOR_VERSION;
+  a_GATT_DevInfoData[8] = CFG_FW_SUBVERSION;
+  a_GATT_DevInfoData[9] = CFG_FW_BRANCH;
+  a_GATT_DevInfoData[10] = CFG_FW_BUILD;
+  LOG_INFO_APP("-- DEVICE INFO CHAR : FW Version = v%d.%d.%d - branch %d - build %d\n",a_GATT_DevInfoData[6],a_GATT_DevInfoData[7],a_GATT_DevInfoData[8],a_GATT_DevInfoData[9],a_GATT_DevInfoData[10]);
+
+  /* Application ID: Tell the phone this is a Radar Sensor */
+  a_GATT_DevInfoData[11] = FW_ID_RADAR_SENSOR; // Use 0x90 or your custom ID
+  LOG_INFO_APP("-- DEVICE INFO CHAR : Application ID = 0x%02X\n", a_GATT_DevInfoData[11]);
+
+  /* Host Stack Version: 0.15, 0.16... */
+  uint8_t HCI_Version = 0;
+  uint16_t HCI_Subversion = 0;
+  uint8_t LMP_Version = 0;
+  uint16_t Company_Identifier = 0;
+  uint16_t LMP_Subversion = 0;
+  hci_read_local_version_information(&HCI_Version, &HCI_Subversion, &LMP_Version, &Company_Identifier, &LMP_Subversion);
+  a_GATT_DevInfoData[12] = (uint8_t)((uint16_t)HCI_Subversion & 0xff);
+  LOG_INFO_APP("-- DEVICE INFO CHAR : Host Stack version = 0x%02X\n",a_GATT_DevInfoData[12]);
+
+  /* Host Stack Type: Full, Basic, Basic Plus... */
+  a_GATT_DevInfoData[13] = (uint8_t)(((uint16_t)HCI_Subversion & 0xff00)>>8);
+  LOG_INFO_APP("-- DEVICE INFO CHAR : Host Stack Type = 0x%02X\n",a_GATT_DevInfoData[13]);
+
+  /* RESERVED */
+  a_GATT_DevInfoData[14] = 0xFF; /* reserved */
+  a_GATT_DevInfoData[15] = 0xFF; /* reserved */
+  a_GATT_DevInfoData[16] = 0xFF; /* reserved */
+  a_GATT_DevInfoData[17] = 0xFF; /* reserved */
+
+  /* Audio Lib */
+  a_GATT_DevInfoData[18] = 0xFF; /* NA */
+  a_GATT_DevInfoData[19] = 0xFF; /* NA */
+
+  /* Audio Codec */
+  a_GATT_DevInfoData[20] = 0xFF; /* NA */
+  a_GATT_DevInfoData[21] = 0xFF; /* NA */
+  LOG_INFO_APP("---------------------------------------------\n");
+
+  ret = aci_gatt_update_char_value(gap_service_handle,
+                             gap_DevInfoChar_handle,
+                             0, /* charValOffset */
+                             SizeDeviceInfoChar, /* charValueLen */
+                             p_device_info_payload);
+  if (ret != BLE_STATUS_SUCCESS)
+  {
+    LOG_INFO_APP("  Fail   : aci_gatt_update_char_value DEVINFO command, error code: 0x%2X\n", ret);
+  }
+  else
+  {
+    LOG_INFO_APP("  Success: aci_gatt_update_char_value DEVINFO command\n");
+  }
   /* USER CODE END Ble_Hci_Gap_Gatt_Init_2 */
 
   LOG_INFO_APP("==>> End Ble_Hci_Gap_Gatt_Init function\n");
@@ -1627,7 +1806,110 @@ static void BLE_NvmCallback(SNVMA_Callback_Status_t CbkStatus)
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTION */
+/**
+ * @brief  Placeholder for your Radar Data Task.
+ * This will eventually be the "Meat" of your project!
+ */
+static void Radar_Process_And_Send_Task(void)
+{
+  /* For now, this function does nothing. 
+   * Later, we will add the code here to:
+   * 1. Read UART data from the Acconeer sensor.
+   * 2. Format it into a BLE notification.
+   * 3. Send it to your phone.
+   */
+   
+   // LOG_INFO_APP("Radar Task Triggered!\n"); 
+}
 
+static void Adv_Cancel_Req(void *arg)
+{
+  UTIL_SEQ_SetTask(1 << CFG_TASK_ADV_CANCEL_ID, CFG_SEQ_PRIO_0);
+  return;
+}
+
+static void Adv_Cancel(void)
+{
+
+  APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_STOP);
+
+  return;
+}
+
+static void fill_advData(uint8_t *p_adv_data, uint8_t tab_size, const uint8_t* p_bd_addr)
+{
+  uint16_t i =0;
+  uint8_t bd_addr_1, bd_addr_0;
+  uint8_t ad_length, ad_type;  
+  
+  while(i < tab_size)
+  {
+    ad_length = p_adv_data[i];
+    ad_type = p_adv_data[i + 1];
+      
+    switch (ad_type)
+    {
+    case AD_TYPE_FLAGS:
+      break;
+    case AD_TYPE_TX_POWER_LEVEL:
+      break;
+    case AD_TYPE_COMPLETE_LOCAL_NAME:
+      {
+        if((p_adv_data[i + ad_length] == 'X') && (p_adv_data[i + ad_length - 1] == 'X'))
+        {
+          bd_addr_1 = ((p_bd_addr[0] & 0xF0)>>4);
+          bd_addr_0 = (p_bd_addr[0] & 0xF);
+          
+          /* Convert hex value into ascii */
+          if(bd_addr_1 > 0x09)
+          {
+            p_adv_data[i + ad_length - 1] = bd_addr_1 + '7';
+          }
+          else
+          {
+            p_adv_data[i + ad_length - 1] = bd_addr_1 + '0';
+          }
+          
+          if(bd_addr_0 > 0x09)
+          {
+            p_adv_data[i + ad_length] = bd_addr_0 + '7';
+          }
+          else
+          {
+            p_adv_data[i + ad_length] = bd_addr_0 + '0';
+          }
+        }
+        break;
+      }
+
+    case AD_TYPE_MANUFACTURER_SPECIFIC_DATA:
+      {
+        p_adv_data[i+2] = ST_MANUF_ID;
+        p_adv_data[i+3] = 0x00;
+        p_adv_data[i+4] = BLUESTSDK_V2; 
+        
+        /* UPDATE THESE TWO LINES */
+        p_adv_data[i+5] = BOARD_ID_CUSTOM_RADAR; /* Use 0xFF if you didn't use the enum */
+        p_adv_data[i+6] = FW_ID_RADAR_SENSOR;    /* Use 0x90 for your Radar Sensor */
+        
+        /* The rest of the address mapping remains the same */
+        p_adv_data[i+7] = 0x00; 
+        p_adv_data[i+8] = 0x00; 
+        p_adv_data[i+9] = 0x00; 
+        p_adv_data[i+10] = p_bd_addr[5]; 
+        p_adv_data[i+11] = p_bd_addr[4];
+        p_adv_data[i+12] = p_bd_addr[3];
+        p_adv_data[i+13] = p_bd_addr[2];
+        p_adv_data[i+14] = p_bd_addr[1];
+        p_adv_data[i+15] = p_bd_addr[0]; 
+        break;
+      }
+    default:
+      break;
+    }
+    i += ad_length + 1; /* increment the iterator to go on next element*/
+  }
+}
 /* USER CODE END FD_LOCAL_FUNCTION */
 
 /*************************************************************

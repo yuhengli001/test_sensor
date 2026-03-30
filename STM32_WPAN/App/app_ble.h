@@ -117,7 +117,35 @@ typedef enum
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
+/** * ST Manufacturer ID (Keep this)
+**/
+#define ST_MANUF_ID  0x30
 
+/** * BlueSTSDK Version (Keep this for app compatibility)
+**/
+enum
+{
+  BLUESTSDK_V1 =  0x01,
+  BLUESTSDK_V2 =  0x02
+};
+
+/** * BOARD ID 
+  * Note: You can keep these enums, but you aren't using them.
+**/
+enum
+{
+  BOARD_ID_CUSTOM_RADAR = 0xFF, /* Unique ID for your custom PCB */
+  BOARD_ID_NUCLEO_WBA5X = 0x8B
+};
+
+/** * FIRMWARE ID 
+  * Add your own custom ID here!
+**/
+enum
+{
+  FW_ID_RADAR_SENSOR = 0x90,    /* New ID for your specific application */
+  FW_ID_P2P_SERVER   = 0x83
+};
 /* USER CODE END EC */
 
 /* External variables --------------------------------------------------------*/

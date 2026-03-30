@@ -36,7 +36,9 @@
 /* External variables --------------------------------------------------------*/
 extern RAMCFG_HandleTypeDef hramcfg_SRAM1;
 extern RNG_HandleTypeDef hrng;
+extern SPI_HandleTypeDef hspi2;
 extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN EV */
 
@@ -97,14 +99,18 @@ void MX_StandbyExit_PeripheralInit(void)
 #endif /* CFG_DEBUGGER_LEVEL */
 
   memset(&hramcfg_SRAM1, 0, sizeof(hramcfg_SRAM1));
+  memset(&hspi2, 0, sizeof(hspi2));
 #if (CFG_LOG_SUPPORTED == 1)
   memset(&huart1, 0, sizeof(huart1));
 #endif
+  memset(&huart2, 0, sizeof(huart2));
 
   MX_RAMCFG_Init();
 #if (CFG_LOG_SUPPORTED == 1)
   MX_USART1_UART_Init();
 #endif
+  MX_USART2_UART_Init();
+  MX_SPI2_Init();
   MX_ICACHE_Init();
   CRCCTRL_Init();
 #if (USE_TEMPERATURE_BASED_RADIO_CALIBRATION == 1)
@@ -123,6 +129,10 @@ void MX_Stop2Exit_PeripheralInit(void)
   /* USER CODE BEGIN MX_STOP2_EXIT_PERIPHERAL_INIT_1 */
   /* USER CODE END MX_STOP2_EXIT_PERIPHERAL_INIT_1 */
 
+    memset(&hspi2, 0, sizeof(hspi2));
+    memset(&huart2, 0, sizeof(huart2));
+
+  MX_SPI2_Init();
 #if (USE_TEMPERATURE_BASED_RADIO_CALIBRATION == 1)
   ADCCTRL_Init();
 #endif /* USE_TEMPERATURE_BASED_RADIO_CALIBRATION */
