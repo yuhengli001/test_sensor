@@ -182,7 +182,7 @@ set(MX_LINK_DIRS
 # Project static libraries
 set(MX_LINK_LIBS  
 	:stm32wba_ble_stack_basic.a
-	:WBA6_LinkLayer_BLE_Basic_lib.a 
+	:WBA6_LinkLayer_BLE_Basic_lib.a
     STM32_Drivers
     ${TOOLCHAIN_LINK_LIBRARIES}
     Utilities

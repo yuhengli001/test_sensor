@@ -331,7 +331,7 @@ void APP_BLE_Init(void)
 
   }
   /* USER CODE BEGIN APP_BLE_Init_2 */
-bleAppContext.connIntervalFlag = 0;
+  bleAppContext.connIntervalFlag = 0;
   /* USER CODE END APP_BLE_Init_2 */
 
   return;
@@ -402,12 +402,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
                     p_disconnection_complete_event->Reason);
 
         /* USER CODE BEGIN EVT_DISCONN_COMPLETE_2 */
-        /* Restart advertising immediately on disconnect */
-        APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
-          
-        /* OPTIONAL: Comment out the timer if you want it to advertise forever 
-            until the battery dies or a phone connects. */
-        // UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
+        
         /* USER CODE END EVT_DISCONN_COMPLETE_2 */
       }
       gap_cmd_resp_release();
@@ -419,7 +414,12 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
       RADAR_SERVERHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
       RADAR_SERVER_APP_EvtRx(&RADAR_SERVERHandleNotification);
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE */
-
+      /* Restart advertising immediately on disconnect */
+      APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
+          
+      /* OPTIONAL: Comment out the timer if you want it to advertise forever 
+      until the battery dies or a phone connects. */
+      // UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
       /* USER CODE END EVT_DISCONN_COMPLETE */
       break; /* HCI_DISCONNECTION_COMPLETE_EVT_CODE */
     }
@@ -1458,7 +1458,7 @@ static void Ble_Hci_Gap_Gatt_Init(void)
   }
 
   /* USER CODE BEGIN Ble_Hci_Gap_Gatt_Init_2 */
-/** Device Info Characteristic **/
+  /** Device Info Characteristic **/
   /* Add a new characterisitc */
   Char_UUID_t  uuid;
   uint16_t gap_DevInfoChar_handle = 0U;

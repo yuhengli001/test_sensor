@@ -204,14 +204,14 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
             notification.EvtOpcode = RADAR_SERVER_A121_CONTROL_WRITE_NO_RESP_EVT;
             /* USER CODE BEGIN Service1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
             /* Log that we received a command from the phone app */
-                LOG_INFO_APP("-- GATT : RADAR COMMAND RECEIVED\n");
+            LOG_INFO_APP("-- GATT : RADAR COMMAND RECEIVED\n");
 
-                /* Store the command data (length and payload) so the application can read it */
-                notification.DataTransfered.Length = p_attribute_modified->Attr_Data_Length;
-                notification.DataTransfered.p_Payload = p_attribute_modified->Attr_Data;
+            /* Store the command data (length and payload) so the application can read it */
+            notification.DataTransfered.Length = p_attribute_modified->Attr_Data_Length;
+            notification.DataTransfered.p_Payload = p_attribute_modified->Attr_Data;
 
-                /* FUTURE STEP: 
-                  Here is where you will add a switch statement:
+            /* FUTURE STEP: 
+              Here is where you will add a switch statement:
                   if (notification.DataTransfered.p_Payload[0] == 0x01) {
                       // Turn on Acconeer Radar via UART/GPIO
                   }
@@ -290,22 +290,7 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
           break;/* ACI_ATT_EXCHANGE_MTU_RESP_VSEVT_CODE */
         }
         /* USER CODE BEGIN BLECORE_EVT */
-        /* Manage ACI_GATT_INDICATION_VSEVT_CODE occurring on Android 12 */   
-        case ACI_GATT_INDICATION_VSEVT_CODE:
-        {
-          tBleStatus status = BLE_STATUS_FAILED;
-          aci_gatt_indication_event_rp0 *pr = (void*)p_blecore_evt->data;
-          status = aci_gatt_confirm_indication(pr->Connection_Handle);
-          if (status != BLE_STATUS_SUCCESS)
-          {
-            LOG_INFO_APP("  Fail   : aci_gatt_confirm_indication command, result: 0x%x \n", status);
-          }
-          else
-          {
-            LOG_INFO_APP("  Success: aci_gatt_confirm_indication command\n");
-          }   
-        }
-          break; /* end ACI_GATT_NOTIFICATION_VSEVT_CODE */
+
         /* USER CODE END BLECORE_EVT */
         default:
           /* USER CODE BEGIN EVT_DEFAULT */

@@ -130,6 +130,7 @@ int main(void)
   MX_GPDMA1_Init();
   MX_RAMCFG_Init();
   MX_RTC_Init();
+  MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_SPI2_Init();
   MX_RNG_Init();
