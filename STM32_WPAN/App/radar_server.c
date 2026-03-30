@@ -71,7 +71,7 @@ typedef struct{
 
 /* Private variables ---------------------------------------------------------*/
 static const uint16_t SizeA121_Control = 2;
-static const uint16_t SizeA121_Data = 2;
+static const uint16_t SizeA121_Data = 4;
 
 static RADAR_SERVER_Context_t RADAR_SERVER_Context;
 

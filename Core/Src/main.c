@@ -137,7 +137,7 @@ int main(void)
   MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
   // acc_example_detector_distance(0, NULL);
-  acc_example_bring_up(0, NULL);
+  // acc_example_bring_up(0, NULL);
 
   /* USER CODE END 2 */
 

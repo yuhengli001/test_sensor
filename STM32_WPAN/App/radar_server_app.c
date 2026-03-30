@@ -31,7 +31,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "radar_sensor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -281,29 +281,35 @@ __USED void RADAR_SERVER_A121_data_SendNotification(void) /* Property Notificati
   radar_server_notification_data.Length = 0;
 
   /* USER CODE BEGIN Service1Char2_NS_1 */
-  /* 1. Get the latest 16-bit distance from your Radar context */
-  /* (Assuming P2P_SERVER_APP_Context.RadarData.Distance_mm was updated by your SPI task) */
-  uint16_t current_distance = RADAR_SERVER_APP_Context.RadarData.Distance_mm;
+  uint16_t current_distance = 0;
+  uint8_t object_count = 0;
 
-  /* 2. Format the BLE packet (Big Endian or Little Endian depending on your App) */
-  /* We use 2 bytes to send up to 65,535mm */
-  a_RADAR_SERVER_UpdateCharData[0] = (uint8_t)(current_distance >> 8);   /* High Byte */
-  a_RADAR_SERVER_UpdateCharData[1] = (uint8_t)(current_distance & 0xFF); /* Low Byte */
-
-  /* 3. Update the data length to 2 bytes */
-  radar_server_notification_data.Length = 2;
-
-  /* 4. Check if the phone is actually listening before we send */
-  if(RADAR_SERVER_APP_Context.A121_data_Notification_Status == A121_data_NOTIFICATION_ON)
+  if (RADAR_SERVER_APP_Context.A121_data_Notification_Status == A121_data_NOTIFICATION_ON)
   {
-    LOG_INFO_APP("-- RADAR APP : SENDING DISTANCE: %d mm\n", current_distance);
-    notification_on_off = A121_data_NOTIFICATION_ON;
+      /* Trigger a live physical measurement from the Acconeer sensor */
+      if(Radar_Sensor_Get_Next(&current_distance, &object_count)) {
+          RADAR_SERVER_APP_Context.RadarData.Distance_mm = current_distance;
+          LOG_INFO_APP("-- RADAR APP : SENDING DIST: %d mm (Targets: %d)\n", current_distance, object_count);
+      } else {
+          /* Fallback to last known good distance if sensor read fails */
+          current_distance = RADAR_SERVER_APP_Context.RadarData.Distance_mm;
+          LOG_INFO_APP("-- RADAR APP : SENSOR SPI READ FAILED! Sending old %d mm\n", current_distance);
+      }
+      notification_on_off = A121_data_NOTIFICATION_ON;
   }
   else
   {
-    LOG_INFO_APP("-- RADAR APP : CANNOT SEND - NOTIFICATIONS DISABLED\n");
-    notification_on_off = A121_data_NOTIFICATION_OFF;
+      notification_on_off = A121_data_NOTIFICATION_OFF;
   }
+
+  /* 2. Format the new 4-byte BLE payload! */
+  a_RADAR_SERVER_UpdateCharData[0] = (uint8_t)(current_distance >> 8);   /* Dist High Byte */
+  a_RADAR_SERVER_UpdateCharData[1] = (uint8_t)(current_distance & 0xFF); /* Dist Low Byte */
+  a_RADAR_SERVER_UpdateCharData[2] = object_count;                       /* Object Count */
+  a_RADAR_SERVER_UpdateCharData[3] = 0x00;                               /* Reserved Byte */
+
+  /* 3. Update the data length to 4 bytes */
+  radar_server_notification_data.Length = 4;
   /* USER CODE END Service1Char2_NS_1 */
 
   if (notification_on_off != A121_data_NOTIFICATION_OFF)
@@ -325,6 +331,13 @@ __USED void RADAR_SERVER_A121_data_SendNotification(void) /* Property Notificati
  */
 static void Radar_Server_App_Context_Init(void)
 {
+  /* Initialize the physical Acconeer Sensor! */
+  if(Radar_Sensor_Init()) {
+      LOG_INFO_APP("-- RADAR APP : SENSOR INITIALIZED SUCCESSFULLY\n");
+  } else {
+      LOG_INFO_APP("-- RADAR APP : SENSOR INITIALIZATION FAILED!\n");
+  }
+
   /* 1. Initialize your Radar Data structure */
   RADAR_SERVER_APP_Context.RadarData.Device_ID = 0x01;      /* Set your primary Sensor ID */
   RADAR_SERVER_APP_Context.RadarData.Distance_mm = 0;       /* Start with 0mm distance */

@@ -112,6 +112,7 @@ typedef struct
   /* USER CODE BEGIN PTD_1 */
   /* Advertising timeout timerID*/
   UTIL_TIMER_Object_t Advertising_mgr_timer_Id;
+  UTIL_TIMER_Object_t Radar_Update_Timer_Id;
 
   uint8_t connIntervalFlag;
   /* USER CODE END PTD_1 */
@@ -224,7 +225,7 @@ static void gap_cmd_resp_release(void);
 /* USER CODE BEGIN PFP */
 static void Adv_Cancel_Req(void *arg);
 static void Adv_Cancel(void);
-static void Radar_Process_And_Send_Task(void);
+static void Radar_Timer_Req(void *arg);
 static void fill_advData(uint8_t *p_adv_data, uint8_t tab_size, const uint8_t*p_bd_addr);
 /* USER CODE END PFP */
 
@@ -291,10 +292,6 @@ void APP_BLE_Init(void)
     /* Register the Advertising Cancel task (keep this) */
     UTIL_SEQ_RegTask(1 << CFG_TASK_ADV_CANCEL_ID, UTIL_SEQ_RFU, Adv_Cancel);
 
-    /* --- NEW: Register your Radar Data task --- */
-    /* This tells the system: "When CFG_TASK_SEND_RADAR_DATA_ID is triggered, run Radar_Process_And_Send_Task" */
-    UTIL_SEQ_RegTask(1 << CFG_TASK_SEND_RADAR_DATA_ID, UTIL_SEQ_RFU, Radar_Process_And_Send_Task);
-
     /* Create timer to handle the Advertising Stop (keep this) */
     UTIL_TIMER_Create(&(bleAppContext.Advertising_mgr_timer_Id),
                       0,
@@ -302,6 +299,12 @@ void APP_BLE_Init(void)
                       &Adv_Cancel_Req,
                       0);
 
+    /* Create timer for 10Hz Radar updates */
+    UTIL_TIMER_Create(&(bleAppContext.Radar_Update_Timer_Id),
+                      100, // 100ms = 10Hz
+                      UTIL_TIMER_PERIODIC,
+                      &Radar_Timer_Req,
+                      0);
     /* USER CODE END APP_BLE_Init_4 */
 
     /* Initialize Services and Characteristics. */
@@ -325,8 +328,8 @@ void APP_BLE_Init(void)
     /* Start to Advertise to accept a connection */
     APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
 
-    /* Start a timer to stop advertising after a while */
-    UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
+    /* Advertise indefinitely — no timeout for dev/prototyping */
+    // UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
     /* USER CODE END APP_BLE_Init_3 */
 
   }
@@ -402,7 +405,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
                     p_disconnection_complete_event->Reason);
 
         /* USER CODE BEGIN EVT_DISCONN_COMPLETE_2 */
-        
+        UTIL_TIMER_Stop(&(bleAppContext.Radar_Update_Timer_Id));
         /* USER CODE END EVT_DISCONN_COMPLETE_2 */
       }
       gap_cmd_resp_release();
@@ -519,6 +522,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           /* USER CODE BEGIN HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
           /* The connection is done, there is no need anymore to schedule the LP ADV */
           UTIL_TIMER_Stop(&(bleAppContext.Advertising_mgr_timer_Id));
+          UTIL_TIMER_Start(&(bleAppContext.Radar_Update_Timer_Id));
           /* USER CODE END HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
           break; /* HCI_LE_ENHANCED_CONNECTION_COMPLETE_SUBEVT_CODE */
         }
@@ -563,6 +567,7 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           /* USER CODE BEGIN HCI_EVT_LE_CONN_COMPLETE */
           /* The connection is done, there is no need anymore to schedule the LP ADV */
           UTIL_TIMER_Stop(&(bleAppContext.Advertising_mgr_timer_Id));
+          UTIL_TIMER_Start(&(bleAppContext.Radar_Update_Timer_Id));
           /* USER CODE END HCI_EVT_LE_CONN_COMPLETE */
           break; /* HCI_LE_CONNECTION_COMPLETE_SUBEVT_CODE */
         }
@@ -1806,20 +1811,10 @@ static void BLE_NvmCallback(SNVMA_Callback_Status_t CbkStatus)
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTION */
-/**
- * @brief  Placeholder for your Radar Data Task.
- * This will eventually be the "Meat" of your project!
- */
-static void Radar_Process_And_Send_Task(void)
+static void Radar_Timer_Req(void *arg)
 {
-  /* For now, this function does nothing. 
-   * Later, we will add the code here to:
-   * 1. Read UART data from the Acconeer sensor.
-   * 2. Format it into a BLE notification.
-   * 3. Send it to your phone.
-   */
-   
-   // LOG_INFO_APP("Radar Task Triggered!\n"); 
+  /* Trigger the sequencer to process and send radar data */
+  UTIL_SEQ_SetTask(1 << CFG_TASK_SEND_RADAR_DATA_ID, CFG_SEQ_PRIO_0);
 }
 
 static void Adv_Cancel_Req(void *arg)
