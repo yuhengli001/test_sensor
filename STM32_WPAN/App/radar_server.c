@@ -258,7 +258,12 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
           {
             return_value = SVCCTL_EvtAckFlowEnable;
             /*USER CODE BEGIN Service1_Char_1_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE */
-//#warning user shall call aci_gatt_permit_write() function if allowed
+            aci_gatt_permit_write(p_write_perm_req->Connection_Handle,
+                                  p_write_perm_req->Attribute_Handle,
+                                  0x00, /* Allow */
+                                  0x00, /* No error */
+                                  p_write_perm_req->Data_Length,
+                                  p_write_perm_req->Data);
             /*USER CODE END Service1_Char_1_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE*/
           }
 

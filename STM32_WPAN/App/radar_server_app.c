@@ -139,28 +139,37 @@ void RADAR_SERVER_Notification(RADAR_SERVER_NotificationEvt_t *p_Notification)
     case RADAR_SERVER_A121_CONTROL_WRITE_NO_RESP_EVT:
       /* USER CODE BEGIN Service1Char1_WRITE_NO_RESP_EVT */
       /* The phone sent a command! Let's check the second byte of the payload */
+      LOG_INFO_APP("-- RADAR APP : CMD RECEIVED. LEN: %d, DATA: %02X %02X\n", 
+                   p_Notification->DataTransfered.Length,
+                   p_Notification->DataTransfered.p_Payload[0],
+                   p_Notification->DataTransfered.p_Payload[1]);
 
       if(p_Notification->DataTransfered.p_Payload[1] == 0x01)
       {
           /* COMMAND: START RADAR */
-          LOG_INFO_APP("-- RADAR APP : START SCAN COMMAND RECEIVED\n");
+          LOG_INFO_APP("-- RADAR APP : START RADAR COMMAND RECEIVED\n");
           
           /* Update your local context so your SPI task knows to start */
           RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x01; 
           
-          /* FUTURE: Add your SPI 'Enable' or 'Start' function here */
-          // Acconeer_Start_Scan(); 
+          /* START the physical radar and calibrate */
+          if(Radar_Sensor_Start()) {
+              LOG_INFO_APP("-- RADAR APP : SENSOR MANUALLY STARTED\n");
+          } else {
+              LOG_INFO_APP("-- RADAR APP : SENSOR MANUAL START FAILED!\n");
+          }
       }
       else if(p_Notification->DataTransfered.p_Payload[1] == 0x00)
       {
         /* COMMAND: STOP RADAR */
-        LOG_INFO_APP("-- RADAR APP : STOP SCAN COMMAND RECEIVED\n");
+        LOG_INFO_APP("-- RADAR APP : STOP RADAR COMMAND RECEIVED\n");
         
         /* Update your local context */
         RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x00;
         
-        /* FUTURE: Add your SPI 'Disable' or 'Power Down' function here */
-        // Acconeer_Stop_Scan();
+        /* STOP the physical radar to save power */
+        Radar_Sensor_Stop();
+        LOG_INFO_APP("-- RADAR APP : SENSOR MANUALLY STOPPED\n");
     }
       /* USER CODE END Service1Char1_WRITE_NO_RESP_EVT */
       break;
@@ -218,6 +227,8 @@ void RADAR_SERVER_APP_EvtRx(RADAR_SERVER_APP_ConnHandleNotEvt_t *p_Notification)
       LOG_INFO_APP("-- RADAR APP : PHONE CONNECTED - STARTING SENSOR\n");
       if(Radar_Sensor_Start()) {
           LOG_INFO_APP("-- RADAR APP : SENSOR STARTED SUCCESSFULLY\n");
+          /* Set our application state to "Started" so the measurement task can run */
+          RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x01;
       } else {
           LOG_INFO_APP("-- RADAR APP : SENSOR START FAILED!\n");
       }
@@ -290,12 +301,14 @@ __USED void RADAR_SERVER_A121_data_SendNotification(void) /* Property Notificati
   uint16_t current_distance = 0;
   uint8_t object_count = 0;
 
-  if (RADAR_SERVER_APP_Context.A121_data_Notification_Status == A121_data_NOTIFICATION_ON)
+  /* 1. Only run measurements if phone is listening AND radar is powered ON */
+  if (RADAR_SERVER_APP_Context.A121_data_Notification_Status == A121_data_NOTIFICATION_ON &&
+      RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID == 0x01)
   {
       /* Trigger a live physical measurement from the Acconeer sensor */
       if(Radar_Sensor_Get_Next(&current_distance, &object_count)) {
           RADAR_SERVER_APP_Context.RadarData.Distance_mm = current_distance;
-          LOG_INFO_APP("-- RADAR APP : SENDING DIST: %d mm (Targets: %d)\n", current_distance, object_count);
+          //LOG_INFO_APP("-- RADAR APP : SENDING DIST: %d mm (Targets: %d)\n", current_distance, object_count);
       } else {
           /* Fallback to last known good distance if sensor read fails */
           current_distance = RADAR_SERVER_APP_Context.RadarData.Distance_mm;
@@ -337,6 +350,7 @@ __USED void RADAR_SERVER_A121_data_SendNotification(void) /* Property Notificati
  */
 static void Radar_Server_App_Context_Init(void)
 {
+  HAL_Delay(100); /* Wait for UART stability */
   /* Initialize the Software Resources for the Acconeer Sensor! (Power stays OFF) */
   if(Radar_Sensor_PreInit()) {
       LOG_INFO_APP("-- RADAR APP : SOFTWARE RESOURCES PRE-INIT SUCCESSFUL\n");
