@@ -15,6 +15,7 @@
 
 typedef enum
 {
+	// Switch betwwen different preset configurations
 	DISTANCE_PRESET_CONFIG_NONE = 0,
 	DISTANCE_PRESET_CONFIG_BALANCED,
 	DISTANCE_PRESET_CONFIG_HIGH_ACCURACY,
@@ -168,7 +169,16 @@ static void set_config(acc_detector_distance_config_t *detector_config, distance
 			acc_detector_distance_config_close_range_leakage_cancellation_set(detector_config, false);
 			break;
 		case DISTANCE_PRESET_CONFIG_HIGH_ACCURACY:
-			// ... 
+			acc_detector_distance_config_start_set(detector_config, 0.25f);
+			acc_detector_distance_config_end_set(detector_config, 3.0f);
+			acc_detector_distance_config_max_step_length_set(detector_config, 2U);
+			acc_detector_distance_config_max_profile_set(detector_config, ACC_CONFIG_PROFILE_3);
+			acc_detector_distance_config_reflector_shape_set(detector_config, ACC_DETECTOR_DISTANCE_REFLECTOR_SHAPE_GENERIC);
+			acc_detector_distance_config_peak_sorting_set(detector_config, ACC_DETECTOR_DISTANCE_PEAK_SORTING_STRONGEST);
+			acc_detector_distance_config_threshold_method_set(detector_config, ACC_DETECTOR_DISTANCE_THRESHOLD_METHOD_CFAR);
+			acc_detector_distance_config_threshold_sensitivity_set(detector_config, 0.5f);
+			acc_detector_distance_config_signal_quality_set(detector_config, 20.0f);
+			acc_detector_distance_config_close_range_leakage_cancellation_set(detector_config, false);
 			break;
 	}
 }
