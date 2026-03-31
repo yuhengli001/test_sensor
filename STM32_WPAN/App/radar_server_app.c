@@ -340,14 +340,14 @@ static void Radar_Server_App_Context_Init(void)
 
   /* 1. Initialize your Radar Data structure */
   RADAR_SERVER_APP_Context.RadarData.Device_ID = 0x01;      /* Set your primary Sensor ID */
-  RADAR_SERVER_APP_Context.RadarData.Distance_mm = 0;       /* Start with 0mm distance */
+  RADAR_SERVER_APP_Context.RadarData.Distance_mm = 0xFFFF;       /* Waiting for radar data */
 
   /* 2. Initialize your Radar Control (Commands from phone) */
   RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x00; /* Default: Stopped */
   RADAR_SERVER_APP_Context.RadarControl.Threshold_Value = 50;    /* Set a default sensitivity */
 
   /* 3. Log that the Radar System is ready */
-  LOG_INFO_APP("-- RADAR APP : CONTEXT INITIALIZED (SPI MODE)\n");
+  LOG_INFO_APP("--RADAR APP : CONTEXT INITIALIZED\n");
 
   return;
 }

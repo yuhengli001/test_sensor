@@ -52,40 +52,49 @@ bool Radar_Sensor_Init(void)
 {
     if (initialized) return true;
 
+	printf("A121: Acconeer software version %s\n", acc_version_get());
     const acc_hal_a121_t *hal = acc_hal_rss_integration_get_implementation();
     if (!acc_rss_hal_register(hal)) {
-        return false;
+        return EXIT_FAILURE;
     }
 
     resources.config = acc_detector_distance_config_create();
     if (resources.config == NULL) {
-        return false;
+		printf("A121: acc_detector_distance_config_create() failed\n");
+		cleanup(&resources);
+        return EXIT_FAILURE;
     }
 
     set_config(resources.config, DISTANCE_PRESET_CONFIG_BALANCED);
 
     if (!initialize_detector_resources(&resources)) {
-        cleanup(&resources);
-        return false;
+		printf("A121: Initializing detector resources failed\n");
+		cleanup(&resources);
+		return EXIT_FAILURE;
     }
 
     acc_hal_integration_sensor_supply_on(SENSOR_ID);
+	printf("A121: Sensor Power on\n");
     acc_hal_integration_sensor_enable(SENSOR_ID);
+	printf("A121: Sensor Enabled\n");
 
     resources.sensor = acc_sensor_create(SENSOR_ID);
     if (resources.sensor == NULL) {
-        cleanup(&resources);
-        return false;
+		printf("A121: acc_sensor_create() failed\n");
+		cleanup(&resources);
+		return EXIT_FAILURE;
     }
 
     if (!do_sensor_calibration(resources.sensor, &sensor_cal_result, resources.buffer, resources.buffer_size)) {
-        cleanup(&resources);
-        return false;
+		printf("A121: Sensor calibration failed\n");
+		cleanup(&resources);
+		return EXIT_FAILURE;
     }
 
     if (!do_full_detector_calibration(&resources, &sensor_cal_result)) {
-        cleanup(&resources);
-        return false;
+		printf("A121: Detector calibration failed\n");
+		cleanup(&resources);
+		return EXIT_FAILURE;
     }
 
     initialized = true;
@@ -99,16 +108,24 @@ bool Radar_Sensor_Get_Next(uint16_t *distance_mm, uint8_t *num_targets)
     acc_detector_distance_result_t result = {0};
 
     if (!do_detector_get_next(&resources, &sensor_cal_result, &result)) {
-        return false;
+		printf("A121: Could not get next result\n");
+		cleanup(&resources);
+		return EXIT_FAILURE;
     }
 
     if (result.calibration_needed) {
+		printf("A121: Sensor recalibration and detector calibration update needed ... \n");
         if (!do_sensor_calibration(resources.sensor, &sensor_cal_result, resources.buffer, resources.buffer_size)) {
-            return false;
+			printf("A121: Sensor calibration failed\n");	
+			cleanup(&resources);
+			return EXIT_FAILURE;
         }
         if (!do_detector_calibration_update(&resources, &sensor_cal_result)) {
-            return false;
+			printf("A121: Detector calibration update failed\n");
+			cleanup(&resources);
+			return EXIT_FAILURE;
         }
+		printf("A121: Sensor recalibration and detector calibration update done!\n");
     }
 
     *num_targets = result.num_distances;
@@ -127,6 +144,7 @@ void Radar_Sensor_Cleanup(void)
     if (!initialized) return;
     cleanup(&resources);
     initialized = false;
+	printf("A121: Done!\n");
 }
 
 /* -------------------------------------------------------------------------- */

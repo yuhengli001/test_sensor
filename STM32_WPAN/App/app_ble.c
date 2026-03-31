@@ -329,7 +329,7 @@ void APP_BLE_Init(void)
     APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
 
     /* Advertise indefinitely — no timeout for dev/prototyping */
-    // UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
+    //UTIL_TIMER_StartWithPeriod(&bleAppContext.Advertising_mgr_timer_Id, ADV_TIMEOUT_MS);
     /* USER CODE END APP_BLE_Init_3 */
 
   }

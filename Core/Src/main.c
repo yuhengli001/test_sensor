@@ -22,8 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-// #include "example_detector_distance.h"
-#include "example_bring_up.h"
+#include "example_detector_distance.h"
+// #include "example_bring_up.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
