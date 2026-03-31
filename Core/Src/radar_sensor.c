@@ -39,6 +39,7 @@ typedef struct
 static distance_detector_resources_t resources = {0};
 static acc_cal_result_t sensor_cal_result;
 static bool initialized = false;
+static bool started = false;
 
 static void cleanup(distance_detector_resources_t *resources);
 static void set_config(acc_detector_distance_config_t *detector_config, distance_preset_config_t preset);
@@ -48,21 +49,21 @@ static bool do_full_detector_calibration(distance_detector_resources_t *resource
 static bool do_detector_calibration_update(distance_detector_resources_t *resources, const acc_cal_result_t *sensor_cal_result);
 static bool do_detector_get_next(distance_detector_resources_t  *resources, const acc_cal_result_t *sensor_cal_result, acc_detector_distance_result_t *result);
 
-bool Radar_Sensor_Init(void)
+bool Radar_Sensor_PreInit(void)
 {
     if (initialized) return true;
 
 	printf("A121: Acconeer software version %s\n", acc_version_get());
     const acc_hal_a121_t *hal = acc_hal_rss_integration_get_implementation();
     if (!acc_rss_hal_register(hal)) {
-        return EXIT_FAILURE;
+        return false;
     }
 
     resources.config = acc_detector_distance_config_create();
     if (resources.config == NULL) {
 		printf("A121: acc_detector_distance_config_create() failed\n");
 		cleanup(&resources);
-        return EXIT_FAILURE;
+        return false;
     }
 
     set_config(resources.config, DISTANCE_PRESET_CONFIG_BALANCED);
@@ -70,9 +71,23 @@ bool Radar_Sensor_Init(void)
     if (!initialize_detector_resources(&resources)) {
 		printf("A121: Initializing detector resources failed\n");
 		cleanup(&resources);
-		return EXIT_FAILURE;
+		return false;
     }
 
+    initialized = true;
+	printf("A121: Software Pre-Initialization complete\n");
+    return true;
+ }
+
+bool Radar_Sensor_Start(void)
+{
+    if (!initialized) {
+        printf("A121: Cannot start - not initialized\n");
+        return false;
+    }
+    if (started) return true;
+
+    printf("A121: Starting hardware ...\n");
     acc_hal_integration_sensor_supply_on(SENSOR_ID);
 	printf("A121: Sensor Power on\n");
     acc_hal_integration_sensor_enable(SENSOR_ID);
@@ -81,29 +96,30 @@ bool Radar_Sensor_Init(void)
     resources.sensor = acc_sensor_create(SENSOR_ID);
     if (resources.sensor == NULL) {
 		printf("A121: acc_sensor_create() failed\n");
-		cleanup(&resources);
-		return EXIT_FAILURE;
+		Radar_Sensor_Stop();
+		return false;
     }
 
     if (!do_sensor_calibration(resources.sensor, &sensor_cal_result, resources.buffer, resources.buffer_size)) {
 		printf("A121: Sensor calibration failed\n");
-		cleanup(&resources);
-		return EXIT_FAILURE;
+		Radar_Sensor_Stop();
+		return false;
     }
 
     if (!do_full_detector_calibration(&resources, &sensor_cal_result)) {
 		printf("A121: Detector calibration failed\n");
-		cleanup(&resources);
-		return EXIT_FAILURE;
+		Radar_Sensor_Stop();
+		return false;
     }
 
-    initialized = true;
+    started = true;
+    printf("A121: Sensor started and calibrated!\n");
     return true;
 }
 
 bool Radar_Sensor_Get_Next(uint16_t *distance_mm, uint8_t *num_targets)
 {
-    if (!initialized) return false;
+    if (!initialized || !started) return false;
 
     acc_detector_distance_result_t result = {0};
 
@@ -139,12 +155,33 @@ bool Radar_Sensor_Get_Next(uint16_t *distance_mm, uint8_t *num_targets)
     return true;
 }
 
+void Radar_Sensor_Stop(void)
+{
+    if (!started) return;
+
+    printf("A121: Stopping hardware ...\n");
+    acc_hal_integration_sensor_disable(SENSOR_ID);
+    acc_hal_integration_sensor_supply_off(SENSOR_ID);
+
+    if (resources.sensor != NULL)
+    {
+        acc_sensor_destroy(resources.sensor);
+        resources.sensor = NULL;
+    }
+
+    started = false;
+    printf("A121: Sensor stopped\n");
+}
+
 void Radar_Sensor_Cleanup(void)
 {
     if (!initialized) return;
+
+    Radar_Sensor_Stop();
     cleanup(&resources);
+
     initialized = false;
-	printf("A121: Done!\n");
+	printf("A121: Software resources cleaned up\n");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -153,19 +190,17 @@ void Radar_Sensor_Cleanup(void)
 
 static void cleanup(distance_detector_resources_t *res)
 {
-	acc_hal_integration_sensor_disable(SENSOR_ID);
-	acc_hal_integration_sensor_supply_off(SENSOR_ID);
-
 	acc_detector_distance_config_destroy(res->config);
+    res->config = NULL;
+
 	acc_detector_distance_destroy(res->handle);
+    res->handle = NULL;
 
 	acc_integration_mem_free(res->buffer);
-	acc_integration_mem_free(res->detector_cal_result_static);
+    res->buffer = NULL;
 
-	if (res->sensor != NULL)
-	{
-		acc_sensor_destroy(res->sensor);
-	}
+	acc_integration_mem_free(res->detector_cal_result_static);
+    res->detector_cal_result_static = NULL;
 }
 
 static void set_config(acc_detector_distance_config_t *detector_config, distance_preset_config_t preset)

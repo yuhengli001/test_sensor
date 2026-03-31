@@ -215,17 +215,23 @@ void RADAR_SERVER_APP_EvtRx(RADAR_SERVER_APP_ConnHandleNotEvt_t *p_Notification)
     /* USER CODE END Service1_APP_EvtRx_Service1_EvtOpcode */
     case RADAR_SERVER_CONN_HANDLE_EVT :
       /* USER CODE BEGIN Service1_APP_CONN_HANDLE_EVT */
-
+      LOG_INFO_APP("-- RADAR APP : PHONE CONNECTED - STARTING SENSOR\n");
+      if(Radar_Sensor_Start()) {
+          LOG_INFO_APP("-- RADAR APP : SENSOR STARTED SUCCESSFULLY\n");
+      } else {
+          LOG_INFO_APP("-- RADAR APP : SENSOR START FAILED!\n");
+      }
       /* USER CODE END Service1_APP_CONN_HANDLE_EVT */
       break;
 
     case RADAR_SERVER_DISCON_HANDLE_EVT :
       /* USER CODE BEGIN Service1_APP_DISCON_HANDLE_EVT */
+      /* Stop the physical radar now that connection is lost */
+      Radar_Sensor_Stop();
+      LOG_INFO_APP("-- RADAR APP : PHONE DISCONNECTED - SENSOR STOPPED\n");
+
       /* Reset the Radar and BLE context now that the phone has disconnected */
       Radar_Server_App_Context_Init();
-  
-      /* Log the event so you can see it in your serial debugger */
-      LOG_INFO_APP("-- RADAR APP : DISCONNECTED - RESETTING CONTEXT\n");
       /* USER CODE END Service1_APP_DISCON_HANDLE_EVT */
       break;
 
@@ -331,11 +337,11 @@ __USED void RADAR_SERVER_A121_data_SendNotification(void) /* Property Notificati
  */
 static void Radar_Server_App_Context_Init(void)
 {
-  /* Initialize the physical Acconeer Sensor! */
-  if(Radar_Sensor_Init()) {
-      LOG_INFO_APP("-- RADAR APP : SENSOR INITIALIZED SUCCESSFULLY\n");
+  /* Initialize the Software Resources for the Acconeer Sensor! (Power stays OFF) */
+  if(Radar_Sensor_PreInit()) {
+      LOG_INFO_APP("-- RADAR APP : SOFTWARE RESOURCES PRE-INIT SUCCESSFUL\n");
   } else {
-      LOG_INFO_APP("-- RADAR APP : SENSOR INITIALIZATION FAILED!\n");
+      LOG_INFO_APP("-- RADAR APP : SOFTWARE RESOURCES PRE-INIT FAILED!\n");
   }
 
   /* 1. Initialize your Radar Data structure */
@@ -347,7 +353,7 @@ static void Radar_Server_App_Context_Init(void)
   RADAR_SERVER_APP_Context.RadarControl.Threshold_Value = 50;    /* Set a default sensitivity */
 
   /* 3. Log that the Radar System is ready */
-  LOG_INFO_APP("--RADAR APP : CONTEXT INITIALIZED\n");
+  // LOG_INFO_APP("-- RADAR APP : CONTEXT INITIALIZED\n");
 
   return;
 }
