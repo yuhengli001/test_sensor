@@ -495,7 +495,7 @@ tBleStatus RADAR_SERVER_UpdateValue(RADAR_SERVER_CharOpcode_t CharOpcode, RADAR_
       }
       else
       {
-        LOG_INFO_BLE("  Success: aci_gatt_update_char_value A121_DATA command\n");
+        /* LOG_INFO_BLE("  Success: aci_gatt_update_char_value A121_DATA command\n"); */
       }
       /* USER CODE BEGIN Service1_Char_Value_2 */
 

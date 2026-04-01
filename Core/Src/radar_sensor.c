@@ -58,11 +58,14 @@ bool Radar_Sensor_PreInit(void)
 
 	LOG_INFO_APP("\n");
 	LOG_INFO_APP("A121: Acconeer software version %s\n", acc_version_get());
+
+	// Register HAL
     const acc_hal_a121_t *hal = acc_hal_rss_integration_get_implementation();
     if (!acc_rss_hal_register(hal)) {
         return false;
     }
 
+	// Create detector config
     resources.config = acc_detector_distance_config_create();
     if (resources.config == NULL) {
 		LOG_INFO_APP("A121: acc_detector_distance_config_create() failed\n");
@@ -72,11 +75,15 @@ bool Radar_Sensor_PreInit(void)
 
     set_config(resources.config, DISTANCE_PRESET_CONFIG_BALANCED);
 
+	// Initialize detector resources
     if (!initialize_detector_resources(&resources)) {
 		LOG_INFO_APP("A121: Initializing detector resources failed\n");
 		cleanup(&resources);
 		return false;
     }
+
+	// Log sensor config and detector config
+    acc_detector_distance_config_log(resources.handle, resources.config);
 
     initialized = true;
 	LOG_INFO_APP("A121: Software Pre-Initialization complete\n");
@@ -93,6 +100,7 @@ bool Radar_Sensor_Start(void)
     }
     if (started) return true;
 
+	// Power on and enable sensor
     LOG_INFO_APP("\n");
     LOG_INFO_APP("A121: Starting hardware ...\n");
     acc_hal_integration_sensor_supply_on(SENSOR_ID);
@@ -100,6 +108,7 @@ bool Radar_Sensor_Start(void)
     acc_hal_integration_sensor_enable(SENSOR_ID);
 	LOG_INFO_APP("A121: Sensor Enabled\n");
 
+	// Create sensor handle
     resources.sensor = acc_sensor_create(SENSOR_ID);
     if (resources.sensor == NULL) {
 		LOG_INFO_APP("A121: acc_sensor_create() failed\n");
@@ -107,12 +116,14 @@ bool Radar_Sensor_Start(void)
 		return false;
     }
 
+	// Sensor calibration
     if (!do_sensor_calibration(resources.sensor, &sensor_cal_result, resources.buffer, resources.buffer_size)) {
 		LOG_INFO_APP("A121: Sensor calibration failed\n");
 		Radar_Sensor_Stop();
 		return false;
     }
 
+	// Detector calibration
     if (!do_full_detector_calibration(&resources, &sensor_cal_result)) {
 		LOG_INFO_APP("A121: Detector calibration failed\n");
 		Radar_Sensor_Stop();
@@ -330,11 +341,16 @@ static bool do_detector_get_next(distance_detector_resources_t *res, const acc_c
 	bool result_available = false;
 	do
 	{
+		// Prepare sensor
 		if (!acc_detector_distance_prepare(res->handle, res->config, res->sensor, sensor_cal_res, res->buffer, res->buffer_size)) return false;
+		// Measure
 		if (!acc_sensor_measure(res->sensor)) return false;
+		// Wait for sensor interrupt
 		if (!acc_hal_integration_wait_for_sensor_interrupt(SENSOR_ID, SENSOR_TIMEOUT_MS)) return false;
+		// Read sensor data
 		if (!acc_sensor_read(res->sensor, res->buffer, res->buffer_size)) return false;
 
+		// Process sensor data	
 		if (!acc_detector_distance_process(res->handle, res->buffer, res->detector_cal_result_static,
 		                                   &res->detector_cal_result_dynamic, &result_available, result))
 		{
