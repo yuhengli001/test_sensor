@@ -22,8 +22,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include "example_detector_distance.h"
+// #include "example_detector_distance.h"
 // #include "example_bring_up.h"
+#include "example_service.h"
+#include "example_processing_amplitude.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -136,8 +138,11 @@ int main(void)
   MX_RNG_Init();
   MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
+
   // acc_example_detector_distance(0, NULL);
   // acc_example_bring_up(0, NULL);
+  // acc_example_service(0, NULL);
+  acc_example_processing_amplitude(0, NULL);
 
   /* USER CODE END 2 */
 

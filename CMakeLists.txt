@@ -48,9 +48,16 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/radar_sensor.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_service.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_bring_up.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/helper/acc_control_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/helper/acc_processing_helpers.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
+
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration/acc_hal_integration_stm32cube_xe121_single_sensor.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration/acc_integration_stm32.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration/acc_integration_log.c
@@ -64,8 +71,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/rss/include
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started
-    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/helper
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/exploration_server
 )
