@@ -1,7 +1,7 @@
 build/
 Debug/
 Release/
-cortex_m33_gcc/
+# cortex_m33_gcc/
 mx.scratch
 .settings
 .vscode
