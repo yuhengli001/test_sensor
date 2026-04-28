@@ -48,25 +48,44 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/radar_sensor.c
+
+    # ====================
+    # === algorithms ===
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/algorithms/acc_algorithm.c
+
+    # === getting started ===
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_bring_up.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
+
+    # === processing ===
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
+    
+    # === example apps ===
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/example_apps/example_vibration.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/example_apps/example_vibration_main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/example_apps/example_surface_velocity.c
+    
+    # === reference apps ===
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/reference_apps/ref_app_breathing.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/reference_apps/ref_app_breathing_main.c
+    
+    # ==================== 
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration/acc_hal_integration_stm32cube_xe121_single_sensor.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration/acc_integration_stm32.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration/acc_integration_log.c
 )
-
-
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/rss/include
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/integration
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/algorithms
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/helper
-    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/example_apps
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/reference_apps
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/exploration_server
 )
 

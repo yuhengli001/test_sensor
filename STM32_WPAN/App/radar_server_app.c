@@ -5,16 +5,6 @@
   * @author  MCD Application Team
   * @brief   Radar_Server_app application definition.
   ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
   */
 /* USER CODE END Header */
 
@@ -32,343 +22,164 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "radar_sensor.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-/**
-  * @brief  Structure to hold Radar Control Commands 
-  * (e.g., received from the phone to Start/Stop the sensor)
-  **/
- typedef struct{
-    uint8_t   Radar_Command_ID;  /* 0x01 = Start, 0x00 = Stop */
-    uint8_t   Threshold_Value;   /* Custom sensitivity setting */
- } Radar_Control_t;
+typedef struct{
+    uint8_t   Radar_Command_ID;
+    uint8_t   Threshold_Value;
+} Radar_Control_t;
 
- /**
-  * @brief  Structure to hold Radar Distance Data 
-  * (This is what you will send TO the phone)
-  **/
- typedef struct{
-    uint8_t   Device_ID;         /* Identification for multiple sensors */
-    uint16_t  Distance_mm;       /* Your Acconeer radar reading in millimeters */
- } Radar_Data_t;
-/* USER CODE END PTD */
+typedef struct{
+    uint8_t   Device_ID;
+    uint16_t  Distance_mm;
+} Radar_Data_t;
 
 typedef enum
 {
   A121_data_NOTIFICATION_OFF,
   A121_data_NOTIFICATION_ON,
-  /* USER CODE BEGIN Service1_APP_SendInformation_t */
-
-  /* USER CODE END Service1_APP_SendInformation_t */
-  RADAR_SERVER_APP_SENDINFORMATION_LAST
 } RADAR_SERVER_APP_SendInformation_t;
 
 typedef struct
 {
   RADAR_SERVER_APP_SendInformation_t     A121_data_Notification_Status;
-  /* USER CODE BEGIN Service1_APP_Context_t */
-  /** * @brief Context to hold the latest radar readings 
-   **/
-  Radar_Data_t    RadarData;    /* Distance (mm) and Device ID */
-  
-  /** * @brief Context to hold commands received from the phone 
-   **/
-  Radar_Control_t RadarControl; /* Start/Stop/Threshold commands */
-  /* USER CODE END Service1_APP_Context_t */
-  uint16_t              ConnectionHandle;
+  Radar_Data_t    RadarData;
+  Radar_Control_t RadarControl;
+  uint16_t        ConnectionHandle;
 } RADAR_SERVER_APP_Context_t;
-
-/* Private defines -----------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* External variables --------------------------------------------------------*/
-/* USER CODE BEGIN EV */
-
-/* USER CODE END EV */
-
-/* Private macros ------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 static RADAR_SERVER_APP_Context_t RADAR_SERVER_APP_Context;
-
 uint8_t a_RADAR_SERVER_UpdateCharData[247];
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 static void RADAR_SERVER_A121_data_SendNotification(void);
-
-/* USER CODE BEGIN PFP */
-/** * @brief  Initialize the internal radar and BLE context.
- * This replaces the LED/Button init from the ST example.
- **/
 static void Radar_Server_App_Context_Init(void);
-
-/** * @brief  Task to process SPI data from Acconeer sensor.
- **/
-static void Radar_Process_And_Send_Task(void) ;
-/* USER CODE END PFP */
 
 /* Functions Definition ------------------------------------------------------*/
 void RADAR_SERVER_Notification(RADAR_SERVER_NotificationEvt_t *p_Notification)
 {
-  /* USER CODE BEGIN Service1_Notification_1 */
-
-  /* USER CODE END Service1_Notification_1 */
   switch(p_Notification->EvtOpcode)
   {
-    /* USER CODE BEGIN Service1_Notification_Service1_EvtOpcode */
-
-    /* USER CODE END Service1_Notification_Service1_EvtOpcode */
-
-    case RADAR_SERVER_A121_CONTROL_READ_EVT:
-      /* USER CODE BEGIN Service1Char1_READ_EVT */
-
-      /* USER CODE END Service1Char1_READ_EVT */
-      break;
-
     case RADAR_SERVER_A121_CONTROL_WRITE_NO_RESP_EVT:
-      /* USER CODE BEGIN Service1Char1_WRITE_NO_RESP_EVT */
-      /* The phone sent a command! Let's check the second byte of the payload */
       LOG_INFO_APP("-- RADAR APP : CMD RECEIVED. LEN: %d, DATA: %02X %02X\n", 
                    p_Notification->DataTransfered.Length,
                    p_Notification->DataTransfered.p_Payload[0],
                    p_Notification->DataTransfered.p_Payload[1]);
 
-      if(p_Notification->DataTransfered.p_Payload[1] == 0x01)
+      if(p_Notification->DataTransfered.p_Payload[0] == 0x02) // Action Command
       {
-          /* COMMAND: START RADAR */
-          LOG_INFO_APP("-- RADAR APP : START RADAR COMMAND RECEIVED\n");
-          
-          /* Update your local context so your SPI task knows to start */
-          RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x01; 
-          
-          /* START the physical radar and calibrate */
-          if(Radar_Sensor_Start()) {
-              LOG_INFO_APP("-- RADAR APP : SENSOR MANUALLY STARTED\n");
+          if (p_Notification->DataTransfered.p_Payload[1] == 0x01) {
+              LOG_INFO_APP("-- RADAR APP : START COMMAND RECEIVED\n");
+              Radar_Sensor_Start();
           } else {
-              LOG_INFO_APP("-- RADAR APP : SENSOR MANUAL START FAILED!\n");
+              LOG_INFO_APP("-- RADAR APP : STOP COMMAND RECEIVED\n");
+              Radar_Sensor_Stop();
           }
       }
-      else if(p_Notification->DataTransfered.p_Payload[1] == 0x00)
+      else if (p_Notification->DataTransfered.p_Payload[0] == 0x03 && 
+               p_Notification->DataTransfered.Length >= 6) // Param Update
       {
-        /* COMMAND: STOP RADAR */
-        LOG_INFO_APP("-- RADAR APP : STOP RADAR COMMAND RECEIVED\n");
-        
-        /* Update your local context */
-        RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x00;
-        
-        /* STOP the physical radar to save power */
-        Radar_Sensor_Stop();
-        LOG_INFO_APP("-- RADAR APP : SENSOR MANUALLY STOPPED\n");
-    }
-      /* USER CODE END Service1Char1_WRITE_NO_RESP_EVT */
+          uint8_t param_id = p_Notification->DataTransfered.p_Payload[1];
+          union {
+              uint8_t  b[4];
+              uint32_t u32;
+          } converter;
+          converter.b[0] = p_Notification->DataTransfered.p_Payload[2];
+          converter.b[1] = p_Notification->DataTransfered.p_Payload[3];
+          converter.b[2] = p_Notification->DataTransfered.p_Payload[4];
+          converter.b[3] = p_Notification->DataTransfered.p_Payload[5];
+
+          LOG_INFO_APP("-- RADAR APP : PARAM UPDATE. ID: %02X\n", param_id);
+          Radar_Sensor_UpdateParam((radar_param_id_t)param_id, &converter.u32);
+      }
       break;
 
     case RADAR_SERVER_A121_DATA_NOTIFY_ENABLED_EVT:
-      /* USER CODE BEGIN Service1Char2_NOTIFY_ENABLED_EVT */
-      /* Enable the flag that allows us to push data to the phone */
       RADAR_SERVER_APP_Context.A121_data_Notification_Status = A121_data_NOTIFICATION_ON;
-      
-      /* Update the log for your custom board */
       LOG_INFO_APP("-- RADAR APP : DISTANCE NOTIFICATIONS ENABLED\n");
-      LOG_INFO_APP(" \n\r");
-      /* USER CODE END Service1Char2_NOTIFY_ENABLED_EVT */
       break;
 
     case RADAR_SERVER_A121_DATA_NOTIFY_DISABLED_EVT:
-      /* USER CODE BEGIN Service1Char2_NOTIFY_DISABLED_EVT */
-      /* Disable the flag so the BLE stack stops trying to push packets */
       RADAR_SERVER_APP_Context.A121_data_Notification_Status = A121_data_NOTIFICATION_OFF;
-  
-      /* Log that the phone stopped listening to the radar */
-      LOG_INFO_APP("-- RADAR APP : DISTANCE NOTIFICATIONS DISABLED\n"); 
-  
-      /* FUTURE: Add your SPI 'Power Down' or 'Sleep' function here 
-      to save battery on your custom board! */
-      // Acconeer_Enter_LowPower_Mode();
-      /* USER CODE END Service1Char2_NOTIFY_DISABLED_EVT */
+      LOG_INFO_APP("-- RADAR APP : DISTANCE NOTIFICATIONS DISABLED\n");
       break;
 
     default:
-      /* USER CODE BEGIN Service1_Notification_default */
-
-      /* USER CODE END Service1_Notification_default */
       break;
   }
-  /* USER CODE BEGIN Service1_Notification_2 */
-
-  /* USER CODE END Service1_Notification_2 */
-  return;
 }
 
 void RADAR_SERVER_APP_EvtRx(RADAR_SERVER_APP_ConnHandleNotEvt_t *p_Notification)
 {
-  /* USER CODE BEGIN Service1_APP_EvtRx_1 */
-
-  /* USER CODE END Service1_APP_EvtRx_1 */
-
   switch(p_Notification->EvtOpcode)
   {
-    /* USER CODE BEGIN Service1_APP_EvtRx_Service1_EvtOpcode */
-
-    /* USER CODE END Service1_APP_EvtRx_Service1_EvtOpcode */
     case RADAR_SERVER_CONN_HANDLE_EVT :
-      /* USER CODE BEGIN Service1_APP_CONN_HANDLE_EVT */
-      LOG_INFO_APP("-- RADAR APP : PHONE CONNECTED - STARTING SENSOR\n");
-      if(Radar_Sensor_Start()) {
-          LOG_INFO_APP("-- RADAR APP : SENSOR STARTED SUCCESSFULLY\n");
-          /* Set our application state to "Started" so the measurement task can run */
-          RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x01;
-      } else {
-          LOG_INFO_APP("-- RADAR APP : SENSOR START FAILED!\n");
-      }
-      /* USER CODE END Service1_APP_CONN_HANDLE_EVT */
+      LOG_INFO_APP("-- RADAR APP : PHONE CONNECTED\n");
       break;
 
     case RADAR_SERVER_DISCON_HANDLE_EVT :
-      /* USER CODE BEGIN Service1_APP_DISCON_HANDLE_EVT */
-      /* Stop the physical radar now that connection is lost */
       Radar_Sensor_Stop();
       LOG_INFO_APP("-- RADAR APP : PHONE DISCONNECTED - SENSOR STOPPED\n");
-
-      /* Reset the Radar and BLE context now that the phone has disconnected */
       Radar_Server_App_Context_Init();
-      /* USER CODE END Service1_APP_DISCON_HANDLE_EVT */
       break;
 
     default:
-      /* USER CODE BEGIN Service1_APP_EvtRx_default */
-
-      /* USER CODE END Service1_APP_EvtRx_default */
       break;
   }
-
-  /* USER CODE BEGIN Service1_APP_EvtRx_2 */
-
-  /* USER CODE END Service1_APP_EvtRx_2 */
-
-  return;
 }
 
 void RADAR_SERVER_APP_Init(void)
 {
-  UNUSED(RADAR_SERVER_APP_Context);
   RADAR_SERVER_Init();
-
-  /* USER CODE BEGIN Service1_APP_Init */
-  /* Register the task that pushes Radar data to the BLE stack */
   UTIL_SEQ_RegTask( 1U << CFG_TASK_SEND_RADAR_DATA_ID, UTIL_SEQ_RFU, RADAR_SERVER_A121_data_SendNotification);
-  /**
-   * Initialize Radar Distance Service
-   */
-  /* Ensure we start with notifications OFF to save power on your custom PCB */
   RADAR_SERVER_APP_Context.A121_data_Notification_Status = A121_data_NOTIFICATION_OFF;
-
-  /* Call the custom Init function we renamed earlier */
   Radar_Server_App_Context_Init();
-  /* USER CODE END Service1_APP_Init */
-  return;
 }
 
-/* USER CODE BEGIN FD */
-
-/* USER CODE END FD */
-
-/*************************************************************
- *
- * LOCAL FUNCTIONS
- *
- *************************************************************/
-__USED void RADAR_SERVER_A121_data_SendNotification(void) /* Property Notification */
+__USED void RADAR_SERVER_A121_data_SendNotification(void)
 {
-  RADAR_SERVER_APP_SendInformation_t notification_on_off = A121_data_NOTIFICATION_OFF;
+  RADAR_SERVER_APP_SendInformation_t notification_on_off = RADAR_SERVER_APP_Context.A121_data_Notification_Status;
   RADAR_SERVER_Data_t radar_server_notification_data;
-
   radar_server_notification_data.p_Payload = (uint8_t*)a_RADAR_SERVER_UpdateCharData;
-  radar_server_notification_data.Length = 0;
 
-  /* USER CODE BEGIN Service1Char2_NS_1 */
-  uint16_t current_distance = 0;
-  uint8_t object_count = 0;
+  float distances[5];
+  float strengths[5];
+  uint8_t num_targets = 0;
 
-  /* 1. Only run measurements if phone is listening AND radar is powered ON */
-  if (RADAR_SERVER_APP_Context.A121_data_Notification_Status == A121_data_NOTIFICATION_ON &&
-      RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID == 0x01)
+  /* Trigger a real-time measurement if notifications are enabled */
+  if (notification_on_off == A121_data_NOTIFICATION_ON)
   {
-      /* Trigger a live physical measurement from the Acconeer sensor */
-      if(Radar_Sensor_Get_Next(&current_distance, &object_count)) {
-          RADAR_SERVER_APP_Context.RadarData.Distance_mm = current_distance;
-          //LOG_INFO_APP("-- RADAR APP : SENDING DIST: %d mm (Targets: %d)\n", current_distance, object_count);
-      } else {
-          /* Fallback to last known good distance if sensor read fails */
-          current_distance = RADAR_SERVER_APP_Context.RadarData.Distance_mm;
-          LOG_INFO_APP("-- RADAR APP : SENSOR SPI READ FAILED! Sending old %d mm\n", current_distance);
+      if(Radar_Sensor_Get_Next_Results(distances, strengths, &num_targets)) 
+      {
+          /* Format structured BLE payload: [Type:0x01][Num][Dist0][Str0]... */
+          a_RADAR_SERVER_UpdateCharData[0] = 0x01; 
+          a_RADAR_SERVER_UpdateCharData[1] = num_targets;
+          
+          uint8_t offset = 2;
+          for (uint8_t i = 0; i < num_targets && i < 2; i++) {
+              memcpy(&a_RADAR_SERVER_UpdateCharData[offset], &distances[i], 4);
+              offset += 4;
+              memcpy(&a_RADAR_SERVER_UpdateCharData[offset], &strengths[i], 4);
+              offset += 4;
+          }
+          radar_server_notification_data.Length = offset;
+          RADAR_SERVER_UpdateValue(RADAR_SERVER_A121_DATA, &radar_server_notification_data);
+
+          if (num_targets > 0) {
+              LOG_INFO_APP("Radar: %d targets, nearest: %.4f m\n", num_targets, distances[0]);
+          }
       }
-      notification_on_off = A121_data_NOTIFICATION_ON;
   }
-  else
-  {
-      notification_on_off = A121_data_NOTIFICATION_OFF;
-  }
-
-  /* 2. Format the new 4-byte BLE payload! */
-  a_RADAR_SERVER_UpdateCharData[0] = (uint8_t)(current_distance >> 8);   /* Dist High Byte */
-  a_RADAR_SERVER_UpdateCharData[1] = (uint8_t)(current_distance & 0xFF); /* Dist Low Byte */
-  a_RADAR_SERVER_UpdateCharData[2] = object_count;                       /* Object Count */
-  a_RADAR_SERVER_UpdateCharData[3] = 0x00;                               /* Reserved Byte */
-
-  /* 3. Update the data length to 4 bytes */
-  radar_server_notification_data.Length = 4;
-  /* USER CODE END Service1Char2_NS_1 */
-
-  if (notification_on_off != A121_data_NOTIFICATION_OFF)
-  {
-    RADAR_SERVER_UpdateValue(RADAR_SERVER_A121_DATA, &radar_server_notification_data);
-  }
-
-  /* USER CODE BEGIN Service1Char2_NS_Last */
-
-  /* USER CODE END Service1Char2_NS_Last */
-
-  return;
 }
 
-/* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
-/**
- * @brief  Initialize the Radar application context.
- * Sets default values for your SPI sensor data and BLE communication.
- */
 static void Radar_Server_App_Context_Init(void)
 {
-  HAL_Delay(100); /* Wait for UART stability */
-  /* Initialize the Software Resources for the Acconeer Sensor! (Power stays OFF) */
   if(Radar_Sensor_PreInit()) {
       LOG_INFO_APP("-- RADAR APP : SOFTWARE RESOURCES PRE-INIT SUCCESSFUL\n");
-  } else {
-      LOG_INFO_APP("-- RADAR APP : SOFTWARE RESOURCES PRE-INIT FAILED!\n");
   }
-
-  /* 1. Initialize your Radar Data structure */
-  RADAR_SERVER_APP_Context.RadarData.Device_ID = 0x01;      /* Set your primary Sensor ID */
-  RADAR_SERVER_APP_Context.RadarData.Distance_mm = 0xFFFF;       /* Waiting for radar data */
-
-  /* 2. Initialize your Radar Control (Commands from phone) */
-  RADAR_SERVER_APP_Context.RadarControl.Radar_Command_ID = 0x00; /* Default: Stopped */
-  RADAR_SERVER_APP_Context.RadarControl.Threshold_Value = 50;    /* Set a default sensitivity */
-
-  /* 3. Log that the Radar System is ready */
-  // LOG_INFO_APP("-- RADAR APP : CONTEXT INITIALIZED\n");
-
-  return;
+  RADAR_SERVER_APP_Context.RadarData.Device_ID = 0x01;
+  RADAR_SERVER_APP_Context.RadarData.Distance_mm = 0xFFFF;
 }
-/* USER CODE END FD_LOCAL_FUNCTIONS */

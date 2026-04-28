@@ -22,8 +22,13 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include "example_detector_distance.h"
+#include <string.h>
+// #include "example_detector_distance.h"
 // #include "example_bring_up.h"
+// #include "example_vibration_main.h"
+#include "radar_sensor.h"
+#include "radar_server.h"
+#include "log_module.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -138,6 +143,11 @@ int main(void)
   /* USER CODE BEGIN 2 */
   // acc_example_detector_distance(0, NULL);
   // acc_example_bring_up(0, NULL);
+  // acc_example_vibration_main(0, NULL);
+
+  if (!Radar_Sensor_PreInit()) {
+      LOG_INFO_APP("Radar Pre-Init Failed!\n");
+  }
 
   /* USER CODE END 2 */
 
@@ -172,7 +182,6 @@ int main(void)
     /* USER CODE END WHILE */
     MX_APPE_Process();
 
-    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }

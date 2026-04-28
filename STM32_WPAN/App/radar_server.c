@@ -23,7 +23,7 @@
 #include "radar_server.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "radar_sensor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -70,8 +70,8 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-static const uint16_t SizeA121_Control = 2;
-static const uint16_t SizeA121_Data = 4;
+static const uint16_t SizeA121_Control = 6;
+static const uint16_t SizeA121_Data = 20; // Increased for multiple target results
 
 static RADAR_SERVER_Context_t RADAR_SERVER_Context;
 
@@ -202,21 +202,8 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
             return_value = SVCCTL_EvtAckFlowEnable;
 
             notification.EvtOpcode = RADAR_SERVER_A121_CONTROL_WRITE_NO_RESP_EVT;
-            /* USER CODE BEGIN Service1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
-            /* Log that we received a command from the phone app */
-            LOG_INFO_APP("-- GATT : RADAR COMMAND RECEIVED\n");
-
-            /* Store the command data (length and payload) so the application can read it */
             notification.DataTransfered.Length = p_attribute_modified->Attr_Data_Length;
             notification.DataTransfered.p_Payload = p_attribute_modified->Attr_Data;
-
-            /* FUTURE STEP: 
-              Here is where you will add a switch statement:
-                  if (notification.DataTransfered.p_Payload[0] == 0x01) {
-                      // Turn on Acconeer Radar via UART/GPIO
-                  }
-                */
-            /* USER CODE END Service1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
             RADAR_SERVER_Notification(&notification);
           }
 

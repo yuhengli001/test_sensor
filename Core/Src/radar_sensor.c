@@ -43,6 +43,7 @@ static distance_detector_resources_t resources = {0};
 static acc_cal_result_t sensor_cal_result;
 static bool initialized = false;
 static bool started = false;
+static bool busy = false;
 
 static void cleanup(distance_detector_resources_t *resources);
 static void set_config(acc_detector_distance_config_t *detector_config, distance_preset_config_t preset);
@@ -56,121 +57,189 @@ bool Radar_Sensor_PreInit(void)
 {
     if (initialized) return true;
 
-	LOG_INFO_APP("\n");
-	LOG_INFO_APP("A121: Acconeer software version %s\n", acc_version_get());
+    LOG_INFO_APP("\n");
+    LOG_INFO_APP("A121: Acconeer software version %s\n", acc_version_get());
 
-	// Register HAL
+    // Register HAL
     const acc_hal_a121_t *hal = acc_hal_rss_integration_get_implementation();
     if (!acc_rss_hal_register(hal)) {
         return false;
     }
 
-	// Create detector config
+    // Create detector config
     resources.config = acc_detector_distance_config_create();
     if (resources.config == NULL) {
-		LOG_INFO_APP("A121: acc_detector_distance_config_create() failed\n");
-		cleanup(&resources);
+        LOG_INFO_APP("A121: acc_detector_distance_config_create() failed\n");
         return false;
     }
 
     set_config(resources.config, DISTANCE_PRESET_CONFIG_BALANCED);
 
-	// Initialize detector resources
+    // Initial resource allocation
     if (!initialize_detector_resources(&resources)) {
-		LOG_INFO_APP("A121: Initializing detector resources failed\n");
-		cleanup(&resources);
-		return false;
-    }
-
-	// Log sensor config and detector config
-    acc_detector_distance_config_log(resources.handle, resources.config);
-
-    initialized = true;
-	LOG_INFO_APP("A121: Software Pre-Initialization complete\n");
-	LOG_INFO_APP("\n");
-    return true;
- }
-
-bool Radar_Sensor_Start(void)
-{
-    if (!initialized) {
-        LOG_INFO_APP("\n");
-        LOG_INFO_APP("A121: Cannot start - not initialized\n");
+        LOG_INFO_APP("A121: Initializing detector resources failed\n");
+        cleanup(&resources);
         return false;
     }
-    if (started) return true;
 
-	// Power on and enable sensor
-    LOG_INFO_APP("\n");
-    LOG_INFO_APP("A121: Starting hardware ...\n");
-    acc_hal_integration_sensor_supply_on(SENSOR_ID);
-	LOG_INFO_APP("A121: Sensor Power on\n");
-    acc_hal_integration_sensor_enable(SENSOR_ID);
-	LOG_INFO_APP("A121: Sensor Enabled\n");
-
-	// Create sensor handle
-    resources.sensor = acc_sensor_create(SENSOR_ID);
-    if (resources.sensor == NULL) {
-		LOG_INFO_APP("A121: acc_sensor_create() failed\n");
-		Radar_Sensor_Stop();
-		return false;
-    }
-
-	// Sensor calibration
-    if (!do_sensor_calibration(resources.sensor, &sensor_cal_result, resources.buffer, resources.buffer_size)) {
-		LOG_INFO_APP("A121: Sensor calibration failed\n");
-		Radar_Sensor_Stop();
-		return false;
-    }
-
-	// Detector calibration
-    if (!do_full_detector_calibration(&resources, &sensor_cal_result)) {
-		LOG_INFO_APP("A121: Detector calibration failed\n");
-		Radar_Sensor_Stop();
-		return false;
-    }
-
-    started = true;
-    LOG_INFO_APP("A121: Sensor started and calibrated!\n");
-    LOG_INFO_APP("\n");
+    initialized = true;
+    LOG_INFO_APP("A121: Software Pre-Initialization complete\n");
     return true;
 }
 
-bool Radar_Sensor_Get_Next(uint16_t *distance_mm, uint8_t *num_targets)
+static bool Radar_Sensor_Reconfigure(void)
+{
+    bool was_started = started;
+
+    if (was_started) {
+        Radar_Sensor_Stop();
+    }
+
+    // Free resources that depend on config (buffer size may change)
+    if (resources.handle != NULL) {
+        acc_detector_distance_destroy(resources.handle);
+        resources.handle = NULL;
+    }
+    if (resources.buffer != NULL) {
+        acc_integration_mem_free(resources.buffer);
+        resources.buffer = NULL;
+    }
+    if (resources.detector_cal_result_static != NULL) {
+        acc_integration_mem_free(resources.detector_cal_result_static);
+        resources.detector_cal_result_static = NULL;
+    }
+
+    // Re-create and re-allocate
+    if (!initialize_detector_resources(&resources)) {
+        LOG_INFO_APP("A121: Re-initialization failed\n");
+        return false;
+    }
+
+    if (was_started) {
+        LOG_INFO_APP("A121: Config Updated. Sensor is now OFF. Send '02 01' to restart.\n");
+    }
+
+    return true;
+}
+
+bool Radar_Sensor_UpdateParam(radar_param_id_t param_id, void *value)
+{
+    if (!initialized) return false;
+
+    LOG_INFO_APP("A121: Updating Param ID 0x%02X\n", param_id);
+
+    switch (param_id) {
+        case RADAR_PARAM_RANGE_START:
+            acc_detector_distance_config_start_set(resources.config, *(float*)value);
+            break;
+        case RADAR_PARAM_RANGE_END:
+            acc_detector_distance_config_end_set(resources.config, *(float*)value);
+            break;
+        case RADAR_PARAM_SENSITIVITY:
+            acc_detector_distance_config_threshold_sensitivity_set(resources.config, *(float*)value);
+            break;
+        case RADAR_PARAM_MAX_PROFILE:
+            acc_detector_distance_config_max_profile_set(resources.config, (acc_config_profile_t)*(uint32_t*)value);
+            break;
+        case RADAR_PARAM_SIGNAL_QUALITY:
+            acc_detector_distance_config_signal_quality_set(resources.config, *(float*)value);
+            break;
+        case RADAR_PARAM_MAX_STEP_LENGTH:
+            acc_detector_distance_config_max_step_length_set(resources.config, (uint16_t)*(uint32_t*)value);
+            break;
+        case RADAR_PARAM_PEAK_SORTING:
+            acc_detector_distance_config_peak_sorting_set(resources.config, (acc_detector_distance_peak_sorting_t)*(uint32_t*)value);
+            break;
+        case RADAR_PARAM_THRESH_METHOD:
+            acc_detector_distance_config_threshold_method_set(resources.config, (acc_detector_distance_threshold_method_t)*(uint32_t*)value);
+            break;
+        case RADAR_PARAM_REFLECTOR_SHAPE:
+            acc_detector_distance_config_reflector_shape_set(resources.config, (acc_detector_distance_reflector_shape_t)*(uint32_t*)value);
+            break;
+        case RADAR_PARAM_LEAKAGE_CANCEL:
+            acc_detector_distance_config_close_range_leakage_cancellation_set(resources.config, *(uint32_t*)value != 0);
+            break;
+        case RADAR_PARAM_NUM_FRAMES:
+            acc_detector_distance_config_num_frames_recorded_threshold_set(resources.config, (uint16_t)*(uint32_t*)value);
+            break;
+        case RADAR_PARAM_FIXED_AMP_THR:
+            acc_detector_distance_config_fixed_amplitude_threshold_value_set(resources.config, *(float*)value);
+            break;
+        case RADAR_PARAM_FIXED_STR_THR:
+            acc_detector_distance_config_fixed_strength_threshold_value_set(resources.config, *(float*)value);
+            break;
+        default:
+            return false;
+    }
+
+    return Radar_Sensor_Reconfigure();
+}
+
+bool Radar_Sensor_Start(void)
+{
+    if (!initialized) return false;
+    if (started) return true;
+    if (busy) return false; // Don't start if another operation is in progress
+
+    busy = true;
+    LOG_INFO_APP("A121: Starting Sensor Calibration...\n");
+
+    acc_hal_integration_sensor_supply_on(SENSOR_ID);
+    acc_hal_integration_sensor_enable(SENSOR_ID);
+
+    resources.sensor = acc_sensor_create(SENSOR_ID);
+    if (resources.sensor == NULL) {
+        Radar_Sensor_Stop();
+        return false;
+    }
+
+    if (!do_sensor_calibration(resources.sensor, &sensor_cal_result, resources.buffer, resources.buffer_size)) {
+        Radar_Sensor_Stop();
+        return false;
+    }
+
+    if (!do_full_detector_calibration(&resources, &sensor_cal_result)) {
+        Radar_Sensor_Stop();
+        busy = false;
+        return false;
+    }
+
+    started = true;
+    busy = false;
+    LOG_INFO_APP("A121: Sensor started with new config!\n");
+    return true;
+}
+
+bool Radar_Sensor_Get_Next_Results(float *distances_m, float *strengths_db, uint8_t *num_targets)
 {
     if (!initialized || !started) return false;
+    if (busy) return false; // Skip if sensor is busy with a previous request
+
+    busy = true;
 
     acc_detector_distance_result_t result = {0};
 
     if (!do_detector_get_next(&resources, &sensor_cal_result, &result)) {
-		LOG_INFO_APP("A121: Could not get next result\n");
-		cleanup(&resources);
-		return EXIT_FAILURE;
+        busy = false;
+        return false;
     }
 
     if (result.calibration_needed) {
-		LOG_INFO_APP("A121: Sensor recalibration and detector calibration update needed ... \n");
         if (!do_sensor_calibration(resources.sensor, &sensor_cal_result, resources.buffer, resources.buffer_size)) {
-			LOG_INFO_APP("A121: Sensor calibration failed\n");	
-			cleanup(&resources);
-			return EXIT_FAILURE;
+            return false;
         }
         if (!do_detector_calibration_update(&resources, &sensor_cal_result)) {
-			LOG_INFO_APP("A121: Detector calibration update failed\n");
-			cleanup(&resources);
-			return EXIT_FAILURE;
+            return false;
         }
-		LOG_INFO_APP("A121: Sensor recalibration and detector calibration update done!\n");
     }
 
     *num_targets = result.num_distances;
-    if (result.num_distances > 0) {
-        /* Convert float meters to uint16_t millimeters */
-        *distance_mm = (uint16_t)(result.distances[0] * 1000.0f);
-    } else {
-        *distance_mm = 0;
+    for (uint8_t i = 0; i < result.num_distances; i++) {
+        distances_m[i] = result.distances[i];
+        strengths_db[i] = result.strengths[i];
     }
 
+    busy = false;
     return true;
 }
 
@@ -178,29 +247,23 @@ void Radar_Sensor_Stop(void)
 {
     if (!started) return;
 
-    LOG_INFO_APP("A121: Stopping hardware ...\n");
     acc_hal_integration_sensor_disable(SENSOR_ID);
     acc_hal_integration_sensor_supply_off(SENSOR_ID);
 
-    if (resources.sensor != NULL)
-    {
+    if (resources.sensor != NULL) {
         acc_sensor_destroy(resources.sensor);
         resources.sensor = NULL;
     }
 
     started = false;
-    LOG_INFO_APP("A121: Sensor stopped\n");
 }
 
 void Radar_Sensor_Cleanup(void)
 {
     if (!initialized) return;
-
     Radar_Sensor_Stop();
     cleanup(&resources);
-
     initialized = false;
-	LOG_INFO_APP("A121: Software resources cleaned up\n");
 }
 
 /* -------------------------------------------------------------------------- */

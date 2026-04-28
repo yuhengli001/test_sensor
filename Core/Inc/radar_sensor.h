@@ -5,37 +5,61 @@
 #include <stdbool.h>
 
 /**
+ * @brief Parameter IDs for real-time tuning via BLE
+ */
+typedef enum {
+    RADAR_PARAM_RANGE_START      = 0x01,
+    RADAR_PARAM_RANGE_END        = 0x02,
+    RADAR_PARAM_SENSITIVITY      = 0x03,
+    RADAR_PARAM_MAX_PROFILE      = 0x04,
+    RADAR_PARAM_SIGNAL_QUALITY   = 0x05,
+    RADAR_PARAM_MAX_STEP_LENGTH  = 0x06,
+    RADAR_PARAM_PEAK_SORTING     = 0x07,
+    RADAR_PARAM_THRESH_METHOD    = 0x08,
+    RADAR_PARAM_REFLECTOR_SHAPE  = 0x09,
+    RADAR_PARAM_LEAKAGE_CANCEL   = 0x0A,
+    RADAR_PARAM_NUM_FRAMES       = 0x0B,
+    RADAR_PARAM_FIXED_AMP_THR    = 0x0C,
+    RADAR_PARAM_FIXED_STR_THR    = 0x0D,
+} radar_param_id_t;
+
+/**
  * @brief Software-only initialization of the Acconeer A121 Sensor resources.
- * This function handles memory allocation and configuration setup, but does 
- * NOT power on the physical sensor.
  * @retval true if successful, false otherwise
  */
 bool Radar_Sensor_PreInit(void);
 
 /**
- * @brief Power on the physical sensor, enable GPIOs, and perform calibration.
- * This should be called once a BLE connection is established.
- * @retval true if hardware initialization and calibration succeed, false otherwise
+ * @brief Update a specific configuration parameter.
+ * If the sensor is already running, it will automatically restart with the new config.
+ * @param param_id The ID of the parameter to update
+ * @param value Pointer to the new value (float or uint32_t)
+ * @retval true if successful
+ */
+bool Radar_Sensor_UpdateParam(radar_param_id_t param_id, void *value);
+
+/**
+ * @brief Power on the physical sensor and perform calibration.
+ * @retval true if successful
  */
 bool Radar_Sensor_Start(void);
 
 /**
- * @brief Run a single measurement and fetch the distance.
- * This function requires Radar_Sensor_Start() to have been called.
- * @param distance_mm Pointer to store the closest measured distance (in mm)
- * @param num_targets Pointer to store how many distinct targets were seen
- * @retval true if measurement was successful, false if it failed or timed out
+ * @brief Run a single measurement and fetch results.
+ * @param distances_m Array of measured distances (in meters)
+ * @param strengths_db Array of measured strengths (in dB)
+ * @param num_targets Pointer to store number of targets found
+ * @retval true if successful
  */
-bool Radar_Sensor_Get_Next(uint16_t *distance_mm, uint8_t *num_targets);
+bool Radar_Sensor_Get_Next_Results(float *distances_m, float *strengths_db, uint8_t *num_targets);
 
 /**
- * @brief Power down the physical sensor and disable GPIOs.
- * This should be called once a BLE connection is terminated.
+ * @brief Stop the physical sensor and free temporary resources.
  */
 void Radar_Sensor_Stop(void);
 
 /**
- * @brief Deallocate all software resources and cleanup memory.
+ * @brief Deallocate all software resources.
  */
 void Radar_Sensor_Cleanup(void);
 
