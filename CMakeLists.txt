@@ -54,8 +54,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/algorithms/acc_algorithm.c
 
     # === getting started ===
-    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_bring_up.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance_M33.c
 
     # === processing ===
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
@@ -64,7 +65,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/example_apps/example_vibration.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/example_apps/example_vibration_main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/example_apps/example_surface_velocity.c
-    
+
     # === reference apps ===
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/reference_apps/ref_app_breathing.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/use_cases/reference_apps/ref_app_breathing_main.c

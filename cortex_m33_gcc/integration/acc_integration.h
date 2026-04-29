@@ -25,6 +25,18 @@ void acc_integration_sleep_us(uint32_t time_usec);
 void acc_integration_sleep_ms(uint32_t time_msec);
 
 /**
+ * @brief Set up a periodic timer used to wake up the system from sleep
+ *
+ * @param time_msec Time in milliseconds
+ */
+void acc_integration_set_periodic_wakeup(uint32_t time_msec);
+
+/**
+ * @brief Put the system in sleep until the periodic timer triggers
+ */
+void acc_integration_sleep_until_periodic_wakeup(void);
+
+/**
  * @brief Allocate dynamic memory
  *
  * @param[in]  size The bytesize of the reuested memory block

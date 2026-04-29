@@ -23,7 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
-// #include "example_detector_distance.h"
+#include "example_detector_distance.h"
 // #include "example_bring_up.h"
 // #include "example_vibration_main.h"
 #include "radar_sensor.h"
@@ -141,7 +141,7 @@ int main(void)
   MX_RNG_Init();
   MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
-  // acc_example_detector_distance(0, NULL);
+  acc_example_detector_distance(0, NULL);
   // acc_example_bring_up(0, NULL);
   // acc_example_vibration_main(0, NULL);
 

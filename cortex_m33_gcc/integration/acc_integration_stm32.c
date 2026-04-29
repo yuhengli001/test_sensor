@@ -12,6 +12,9 @@
 
 #include "acc_integration.h"
 
+static uint32_t periodic_interval_ms = 0;
+static uint32_t next_wakeup_tick     = 0;
+
 void acc_integration_sleep_ms(uint32_t time_msec)
 {
 	HAL_Delay(time_msec);
@@ -29,8 +32,6 @@ uint32_t acc_integration_get_time(void)
 	return HAL_GetTick();
 }
 
-// wrap malloc() to acc_integration_mem_alloc()
-// good practice to wrap standard function
 void *acc_integration_mem_alloc(size_t size)
 {
 	return malloc(size);
@@ -44,5 +45,28 @@ void *acc_integration_mem_calloc(size_t nmemb, size_t size)
 void acc_integration_mem_free(void *ptr)
 {
 	free(ptr);
+}
+
+
+void acc_integration_set_periodic_wakeup(uint32_t time_msec)
+{
+	periodic_interval_ms = time_msec;
+	next_wakeup_tick     = HAL_GetTick() + time_msec;
+}
+
+
+void acc_integration_sleep_until_periodic_wakeup(void)
+{
+	if (periodic_interval_ms > 0)
+	{
+		uint32_t now = HAL_GetTick();
+
+		if (next_wakeup_tick > now)
+		{
+			HAL_Delay(next_wakeup_tick - now);
+		}
+
+		next_wakeup_tick += periodic_interval_ms;
+	}
 }
 
