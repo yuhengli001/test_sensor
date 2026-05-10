@@ -187,8 +187,8 @@ set(MX_LINK_DIRS
 )
 # Project static libraries
 set(MX_LINK_LIBS  
-	:WBA6_LinkLayer_BLE_Basic_lib.a 
 	:stm32wba_ble_stack_basic.a
+	:WBA6_LinkLayer_BLE_Basic_lib.a 
     STM32_Drivers
     ${TOOLCHAIN_LINK_LIBRARIES}
     Utilities	STM32_WPAN	Common	
@@ -226,7 +226,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${MX_Application_Src})
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE ${MX_LINK_DIRS})
 
 # Add libraries to the project
-target_link_libraries(${CMAKE_PROJECT_NAME} ${MX_LINK_LIBS})
+target_link_libraries(${CMAKE_PROJECT_NAME} -Wl,--start-group ${MX_LINK_LIBS} -Wl,--end-group)
 
 # Add the map file to the list of files to be removed with 'clean' target
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)

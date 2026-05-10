@@ -139,7 +139,7 @@ int main(void)
   MX_RNG_Init();
   MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
-  acc_example_detector_distance(0, NULL);
+  // acc_example_detector_distance(0, NULL);
   // acc_example_bring_up(0, NULL);
   // acc_example_vibration_main(0, NULL);
 
