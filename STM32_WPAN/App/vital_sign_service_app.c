@@ -119,25 +119,25 @@ void VITAL_SIGN_SERVICE_Notification(VITAL_SIGN_SERVICE_NotificationEvt_t *p_Not
 
     case VITAL_SIGN_SERVICE_VITAL_DATA_NOTIFY_ENABLED_EVT:
       /* USER CODE BEGIN Service2Char2_NOTIFY_ENABLED_EVT */
-
+      VITAL_SIGN_SERVICE_APP_Context.Vital_data_Notification_Status = Vital_data_NOTIFICATION_ON;
       /* USER CODE END Service2Char2_NOTIFY_ENABLED_EVT */
       break;
 
     case VITAL_SIGN_SERVICE_VITAL_DATA_NOTIFY_DISABLED_EVT:
       /* USER CODE BEGIN Service2Char2_NOTIFY_DISABLED_EVT */
-
+      VITAL_SIGN_SERVICE_APP_Context.Vital_data_Notification_Status = Vital_data_NOTIFICATION_OFF;
       /* USER CODE END Service2Char2_NOTIFY_DISABLED_EVT */
       break;
 
     case VITAL_SIGN_SERVICE_WAVEFORM_NOTIFY_ENABLED_EVT:
       /* USER CODE BEGIN Service2Char3_NOTIFY_ENABLED_EVT */
-
+      VITAL_SIGN_SERVICE_APP_Context.Waveform_Notification_Status = Waveform_NOTIFICATION_ON;
       /* USER CODE END Service2Char3_NOTIFY_ENABLED_EVT */
       break;
 
     case VITAL_SIGN_SERVICE_WAVEFORM_NOTIFY_DISABLED_EVT:
       /* USER CODE BEGIN Service2Char3_NOTIFY_DISABLED_EVT */
-
+      VITAL_SIGN_SERVICE_APP_Context.Waveform_Notification_Status = Waveform_NOTIFICATION_OFF;
       /* USER CODE END Service2Char3_NOTIFY_DISABLED_EVT */
       break;
 

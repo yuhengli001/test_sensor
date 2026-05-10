@@ -31,7 +31,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stm32_seq.h"   /* For UTIL_SEQ_SetTask */
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -79,14 +79,15 @@ static CONTROL_SERVICE_APP_Context_t CONTROL_SERVICE_APP_Context;
 uint8_t a_CONTROL_SERVICE_UpdateCharData[247];
 
 /* USER CODE BEGIN PV */
-
+uint8_t current_radar_mode = 0; /* 0: None, 1: Vital, 2: Fall, 3: Vibration */
+uint8_t is_radar_running = 0;   /* 0: Stopped, 1: Running */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 static void CONTROL_SERVICE_Sensor_status_SendNotification(void);
 
 /* USER CODE BEGIN PFP */
-
+static void Radar_Process_Task(void);
 /* USER CODE END PFP */
 
 /* Functions Definition ------------------------------------------------------*/
@@ -109,12 +110,31 @@ void CONTROL_SERVICE_Notification(CONTROL_SERVICE_NotificationEvt_t *p_Notificat
 
     case CONTROL_SERVICE_ACTIVE_MODE_WRITE_NO_RESP_EVT:
       /* USER CODE BEGIN Service1Char1_WRITE_NO_RESP_EVT */
-
+      if (p_Notification->DataTransfered.Length == 1)
+      {
+          current_radar_mode = p_Notification->DataTransfered.p_Payload[0];
+          LOG_INFO_APP("Radar Mode changed to: %d\r\n", current_radar_mode);
+      }
       /* USER CODE END Service1Char1_WRITE_NO_RESP_EVT */
       break;
 
     case CONTROL_SERVICE_SYSTEM_COMMAND_WRITE_NO_RESP_EVT:
       /* USER CODE BEGIN Service1Char2_WRITE_NO_RESP_EVT */
+      if (p_Notification->DataTransfered.Length == 1)
+      {
+          uint8_t cmd = p_Notification->DataTransfered.p_Payload[0];
+          if (cmd == 0x01) /* START command */
+          {
+              is_radar_running = 1;
+              LOG_INFO_APP("Received START command. Starting Radar Task...\r\n");
+              UTIL_SEQ_SetTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, CFG_SEQ_PRIO_0); /* Triggers the radar task */
+          }
+          else if (cmd == 0x00) /* STOP command */
+          {
+              is_radar_running = 0;
+              LOG_INFO_APP("Received STOP command. Stopping Radar...\r\n");
+          }
+      }
 
       /* USER CODE END Service1Char2_WRITE_NO_RESP_EVT */
       break;
@@ -127,13 +147,13 @@ void CONTROL_SERVICE_Notification(CONTROL_SERVICE_NotificationEvt_t *p_Notificat
 
     case CONTROL_SERVICE_SENSOR_STATUS_NOTIFY_ENABLED_EVT:
       /* USER CODE BEGIN Service1Char3_NOTIFY_ENABLED_EVT */
-
+      CONTROL_SERVICE_APP_Context.Sensor_status_Notification_Status = Sensor_status_NOTIFICATION_ON;
       /* USER CODE END Service1Char3_NOTIFY_ENABLED_EVT */
       break;
 
     case CONTROL_SERVICE_SENSOR_STATUS_NOTIFY_DISABLED_EVT:
       /* USER CODE BEGIN Service1Char3_NOTIFY_DISABLED_EVT */
-
+      CONTROL_SERVICE_APP_Context.Sensor_status_Notification_Status = Sensor_status_NOTIFICATION_OFF;
       /* USER CODE END Service1Char3_NOTIFY_DISABLED_EVT */
       break;
 
@@ -192,7 +212,7 @@ void CONTROL_SERVICE_APP_Init(void)
   CONTROL_SERVICE_Init();
 
   /* USER CODE BEGIN Service1_APP_Init */
-
+  UTIL_SEQ_RegTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, UTIL_SEQ_RFU, Radar_Process_Task); /* Register the task */
   /* USER CODE END Service1_APP_Init */
   return;
 }
@@ -231,5 +251,12 @@ __USED void CONTROL_SERVICE_Sensor_status_SendNotification(void) /* Property Not
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
-
+static void Radar_Process_Task(void) {
+  if (is_radar_running == 0) return; 
+  
+  /* TODO: Based on 'current_radar_mode', call Acconeer radar math here */
+  
+  /* Keep the loop running */
+  // UTIL_SEQ_SetTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, CFG_SEQ_PRIO_0);
+}
 /* USER CODE END FD_LOCAL_FUNCTIONS */
