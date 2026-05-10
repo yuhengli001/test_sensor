@@ -74,7 +74,18 @@ static bool do_detector_get_next(distance_detector_resources_t *resources,
 static float previous_distance = 0.0f;
 static bool has_previous_distance = false;
 
-static void print_distance_result(const acc_detector_distance_result_t *result);
+static void print_distance_result(const acc_detector_distance_result_t *result) {
+  if (result->num_distances == 0) {
+    printf("No distance detected\n");
+    has_previous_distance = false;
+    return;
+  }
+
+  float current_dist = result->distances[0];
+  printf("Distance: %.3f m (strength: %.1f dB)\n",
+         (double)current_dist,
+         (double)result->strengths[0]);
+}
 
 int acc_example_detector_distance(int argc, char *argv[]) {
   (void)argc;
@@ -392,6 +403,13 @@ static bool do_detector_get_next(distance_detector_resources_t *resources,
     }
   } while (!result_available);
   // 调度各子模块
-  process_fall_detection(diff * SAMPLE_RATE_HZ, diff, current_dist);
-  process_vital_signs(diff, current_dist);
+  if (result->num_distances > 0) {
+    float current_dist        = result->distances[0];
+    float diff                = has_previous_distance ? (current_dist - previous_distance) : 0.0f;
+    previous_distance         = current_dist;
+    has_previous_distance = true;
+    process_vital_signs(diff, current_dist);
+  }
+
+  return true;
 }

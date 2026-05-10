@@ -57,6 +57,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_bring_up.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance_M33.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/vital_signs.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/fall_detector.c
 
     # === processing ===
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
