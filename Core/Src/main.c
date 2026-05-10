@@ -26,8 +26,6 @@
 #include "example_detector_distance.h"
 // #include "example_bring_up.h"
 // #include "example_vibration_main.h"
-#include "radar_sensor.h"
-#include "radar_server.h"
 #include "log_module.h"
 /* USER CODE END Includes */
 
@@ -145,10 +143,6 @@ int main(void)
   // acc_example_bring_up(0, NULL);
   // acc_example_vibration_main(0, NULL);
 
-  if (!Radar_Sensor_PreInit()) {
-      LOG_INFO_APP("Radar Pre-Init Failed!\n");
-  }
-
   /* USER CODE END 2 */
 
   /* Init code for STM32_WPAN */
@@ -182,6 +176,7 @@ int main(void)
     /* USER CODE END WHILE */
     MX_APPE_Process();
 
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
@@ -216,7 +211,14 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL1.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL1.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL1.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL1.PLLM = 1;
+  RCC_OscInitStruct.PLL1.PLLN = 8;
+  RCC_OscInitStruct.PLL1.PLLP = 2;
+  RCC_OscInitStruct.PLL1.PLLQ = 2;
+  RCC_OscInitStruct.PLL1.PLLR = 2;
+  RCC_OscInitStruct.PLL1.PLLFractional = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -227,15 +229,15 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
                               |RCC_CLOCKTYPE_PCLK7|RCC_CLOCKTYPE_HCLK5;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB7CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.AHB5_PLL1_CLKDivider = RCC_SYSCLK_PLL1_DIV1;
+  RCC_ClkInitStruct.AHB5_PLL1_CLKDivider = RCC_SYSCLK_PLL1_DIV2;
   RCC_ClkInitStruct.AHB5_HSEHSI_CLKDivider = RCC_SYSCLK_HSEHSI_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }

@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    Radar_Server.c
+  * @file    Control_Service.c
   * @author  MCD Application Team
-  * @brief   Radar_Server definition.
+  * @brief   Control_Service definition.
   ******************************************************************************
   * @attention
   *
@@ -20,10 +20,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "log_module.h"
-#include "radar_server.h"
+#include "control_service.h"
 
 /* USER CODE BEGIN Includes */
-#include "radar_sensor.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,14 +33,15 @@
 /* USER CODE END PTD */
 
 typedef struct{
-  uint16_t  Radar_serverSvcHdle;                  /**< Radar_server Service Handle */
-  uint16_t  A121_ControlCharHdle;                  /**< A121_CONTROL Characteristic Handle */
-  uint16_t  A121_DataCharHdle;                  /**< A121_DATA Characteristic Handle */
+  uint16_t  Control_serviceSvcHdle;                  /**< Control_service Service Handle */
+  uint16_t  Active_ModeCharHdle;                  /**< ACTIVE_MODE Characteristic Handle */
+  uint16_t  System_CommandCharHdle;                  /**< SYSTEM_COMMAND Characteristic Handle */
+  uint16_t  Sensor_StatusCharHdle;                  /**< SENSOR_STATUS Characteristic Handle */
 /* USER CODE BEGIN Context */
   /* Place holder for Characteristic Descriptors Handle*/
 
 /* USER CODE END Context */
-}RADAR_SERVER_Context_t;
+}CONTROL_SERVICE_Context_t;
 
 /* Private defines -----------------------------------------------------------*/
 #define UUID_128_SUPPORTED  1
@@ -70,17 +71,18 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-static const uint16_t SizeA121_Control = 6;
-static const uint16_t SizeA121_Data = 20; // Increased for multiple target results
+static const uint16_t SizeActive_Mode = 1;
+static const uint16_t SizeSystem_Command = 1;
+static const uint16_t SizeSensor_Status = 1;
 
-static RADAR_SERVER_Context_t RADAR_SERVER_Context;
+static CONTROL_SERVICE_Context_t CONTROL_SERVICE_Context;
 
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_pckt);
+static SVCCTL_EvtAckStatus_t CONTROL_SERVICE_EventHandler(void *p_pckt);
 
 /* USER CODE BEGIN PFP */
 
@@ -107,10 +109,12 @@ do {\
  0000FE40CC7A482A984A7F2ED5B3E58F: Service 128bits UUID
  0000FE418E2245419D4C21EDAE82ED19: Characteristic 128bits UUID
  0000FE428E2245419D4C21EDAE82ED19: Characteristic 128bits UUID
+ 0000FE438E2245419D4C21EDAE82ED19: Characteristic 128bits UUID
  */
-#define COPY_RADAR_SERVER_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x40,0xcc,0x7a,0x48,0x2a,0x98,0x4a,0x7f,0x2e,0xd5,0xb3,0xe5,0x8f)
-#define COPY_A121_CONTROL_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x41,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
-#define COPY_A121_DATA_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x42,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
+#define COPY_CONTROL_SERVICE_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x40,0xcc,0x7a,0x48,0x2a,0x98,0x4a,0x7f,0x2e,0xd5,0xb3,0xe5,0x8f)
+#define COPY_ACTIVE_MODE_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x41,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
+#define COPY_SYSTEM_COMMAND_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x42,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
+#define COPY_SENSOR_STATUS_UUID(uuid_struct)       COPY_UUID_128(uuid_struct,0x00,0x00,0xfe,0x43,0x8e,0x22,0x45,0x41,0x9d,0x4c,0x21,0xed,0xae,0x82,0xed,0x19)
 
 /* USER CODE BEGIN PF */
 
@@ -121,15 +125,13 @@ do {\
  * @param  p_Event: Address of the buffer holding the p_Event
  * @retval Ack: Return whether the p_Event has been managed or not
  */
-static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
+static SVCCTL_EvtAckStatus_t CONTROL_SERVICE_EventHandler(void *p_Event)
 {
   SVCCTL_EvtAckStatus_t return_value;
   hci_event_pckt *p_event_pckt;
   evt_blecore_aci *p_blecore_evt;
   aci_gatt_attribute_modified_event_rp0 *p_attribute_modified;
-  aci_gatt_write_permit_req_event_rp0   *p_write_perm_req;
-  aci_gatt_read_permit_req_event_rp0    *p_read_req;
-  RADAR_SERVER_NotificationEvt_t                 notification;
+  CONTROL_SERVICE_NotificationEvt_t                 notification;
   /* USER CODE BEGIN Service1_EventHandler_1 */
 
   /* USER CODE END Service1_EventHandler_1 */
@@ -153,58 +155,69 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
           notification.AttributeHandle          = p_attribute_modified->Attr_Handle;
           notification.DataTransfered.Length    = p_attribute_modified->Attr_Data_Length;
           notification.DataTransfered.p_Payload = p_attribute_modified->Attr_Data;
-          if(p_attribute_modified->Attr_Handle == (RADAR_SERVER_Context.A121_DataCharHdle + CHARACTERISTIC_DESCRIPTOR_ATTRIBUTE_OFFSET))
+          if(p_attribute_modified->Attr_Handle == (CONTROL_SERVICE_Context.Sensor_StatusCharHdle + CHARACTERISTIC_DESCRIPTOR_ATTRIBUTE_OFFSET))
           {
             return_value = SVCCTL_EvtAckFlowEnable;
-            /* USER CODE BEGIN Service1_Char_2 */
+            /* USER CODE BEGIN Service1_Char_3 */
 
-            /* USER CODE END Service1_Char_2 */
+            /* USER CODE END Service1_Char_3 */
             switch(p_attribute_modified->Attr_Data[0])
             {
-              /* USER CODE BEGIN Service1_Char_2_attribute_modified */
+              /* USER CODE BEGIN Service1_Char_3_attribute_modified */
 
-              /* USER CODE END Service1_Char_2_attribute_modified */
+              /* USER CODE END Service1_Char_3_attribute_modified */
 
               /* Disabled Notification management */
               case (0x00):
-                /* USER CODE BEGIN Service1_Char_2_Disabled_BEGIN */
+                /* USER CODE BEGIN Service1_Char_3_Disabled_BEGIN */
 
-                /* USER CODE END Service1_Char_2_Disabled_BEGIN */
-                notification.EvtOpcode = RADAR_SERVER_A121_DATA_NOTIFY_DISABLED_EVT;
-                RADAR_SERVER_Notification(&notification);
-                /* USER CODE BEGIN Service1_Char_2_Disabled_END */
+                /* USER CODE END Service1_Char_3_Disabled_BEGIN */
+                notification.EvtOpcode = CONTROL_SERVICE_SENSOR_STATUS_NOTIFY_DISABLED_EVT;
+                CONTROL_SERVICE_Notification(&notification);
+                /* USER CODE BEGIN Service1_Char_3_Disabled_END */
 
-                /* USER CODE END Service1_Char_2_Disabled_END */
+                /* USER CODE END Service1_Char_3_Disabled_END */
                 break;
 
               /* Enabled Notification management */
               case GATT_CHAR_UPDATE_SEND_NOTIFICATION:
-                /* USER CODE BEGIN Service1_Char_2_COMSVC_Notification_BEGIN */
+                /* USER CODE BEGIN Service1_Char_3_COMSVC_Notification_BEGIN */
 
-                /* USER CODE END Service1_Char_2_COMSVC_Notification_BEGIN */
-                notification.EvtOpcode = RADAR_SERVER_A121_DATA_NOTIFY_ENABLED_EVT;
-                RADAR_SERVER_Notification(&notification);
-                /* USER CODE BEGIN Service1_Char_2_COMSVC_Notification_END */
+                /* USER CODE END Service1_Char_3_COMSVC_Notification_BEGIN */
+                notification.EvtOpcode = CONTROL_SERVICE_SENSOR_STATUS_NOTIFY_ENABLED_EVT;
+                CONTROL_SERVICE_Notification(&notification);
+                /* USER CODE BEGIN Service1_Char_3_COMSVC_Notification_END */
 
-                /* USER CODE END Service1_Char_2_COMSVC_Notification_END */
+                /* USER CODE END Service1_Char_3_COMSVC_Notification_END */
                 break;
 
               default:
-                /* USER CODE BEGIN Service1_Char_2_default */
+                /* USER CODE BEGIN Service1_Char_3_default */
 
-                /* USER CODE END Service1_Char_2_default */
+                /* USER CODE END Service1_Char_3_default */
                 break;
             }
           }
 
-          else if(p_attribute_modified->Attr_Handle == (RADAR_SERVER_Context.A121_ControlCharHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
+          else if(p_attribute_modified->Attr_Handle == (CONTROL_SERVICE_Context.Active_ModeCharHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
           {
             return_value = SVCCTL_EvtAckFlowEnable;
 
-            notification.EvtOpcode = RADAR_SERVER_A121_CONTROL_WRITE_NO_RESP_EVT;
-            notification.DataTransfered.Length = p_attribute_modified->Attr_Data_Length;
-            notification.DataTransfered.p_Payload = p_attribute_modified->Attr_Data;
-            RADAR_SERVER_Notification(&notification);
+            notification.EvtOpcode = CONTROL_SERVICE_ACTIVE_MODE_WRITE_NO_RESP_EVT;
+            /* USER CODE BEGIN Service1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
+
+            /* USER CODE END Service1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
+            CONTROL_SERVICE_Notification(&notification);
+          }
+          else if(p_attribute_modified->Attr_Handle == (CONTROL_SERVICE_Context.System_CommandCharHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
+          {
+            return_value = SVCCTL_EvtAckFlowEnable;
+
+            notification.EvtOpcode = CONTROL_SERVICE_SYSTEM_COMMAND_WRITE_NO_RESP_EVT;
+            /* USER CODE BEGIN Service1_Char_2_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
+
+            /* USER CODE END Service1_Char_2_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
+            CONTROL_SERVICE_Notification(&notification);
           }
 
           /* USER CODE BEGIN EVT_BLUE_GATT_ATTRIBUTE_MODIFIED_END */
@@ -217,18 +230,6 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
           /* USER CODE BEGIN EVT_BLUE_GATT_READ_PERMIT_REQ_BEGIN */
 
           /* USER CODE END EVT_BLUE_GATT_READ_PERMIT_REQ_BEGIN */
-          p_read_req = (aci_gatt_read_permit_req_event_rp0*)p_blecore_evt->data;
-          if(p_read_req->Attribute_Handle == (RADAR_SERVER_Context.A121_ControlCharHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
-          {
-            return_value = SVCCTL_EvtAckFlowEnable;
-            /*USER CODE BEGIN Service1_Char_1_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE_1 */
-
-            /*USER CODE END Service1_Char_1_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE_1*/
-
-            /*USER CODE BEGIN Service1_Char_1_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE_2 */
-// #warning user shall call aci_gatt_permit_read() function if allowed
-            /*USER CODE END Service1_Char_1_ACI_GATT_READ_PERMIT_REQ_VSEVT_CODE_2*/
-          }
 
           /* USER CODE BEGIN EVT_BLUE_GATT_READ_PERMIT_REQ_END */
 
@@ -240,19 +241,6 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
           /* USER CODE BEGIN EVT_BLUE_GATT_WRITE_PERMIT_REQ_BEGIN */
 
           /* USER CODE END EVT_BLUE_GATT_WRITE_PERMIT_REQ_BEGIN */
-          p_write_perm_req = (aci_gatt_write_permit_req_event_rp0*)p_blecore_evt->data;
-          if(p_write_perm_req->Attribute_Handle == (RADAR_SERVER_Context.A121_ControlCharHdle + CHARACTERISTIC_VALUE_ATTRIBUTE_OFFSET))
-          {
-            return_value = SVCCTL_EvtAckFlowEnable;
-            /*USER CODE BEGIN Service1_Char_1_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE */
-            aci_gatt_permit_write(p_write_perm_req->Connection_Handle,
-                                  p_write_perm_req->Attribute_Handle,
-                                  0x00, /* Allow */
-                                  0x00, /* No error */
-                                  p_write_perm_req->Data_Length,
-                                  p_write_perm_req->Data);
-            /*USER CODE END Service1_Char_1_ACI_GATT_WRITE_PERMIT_REQ_VSEVT_CODE*/
-          }
 
           /* USER CODE BEGIN EVT_BLUE_GATT_WRITE_PERMIT_REQ_END */
 
@@ -311,7 +299,7 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
   /* USER CODE END Service1_EventHandler_2 */
 
   return(return_value);
-}/* end RADAR_SERVER_EventHandler */
+}/* end CONTROL_SERVICE_EventHandler */
 
 /* Public functions ----------------------------------------------------------*/
 
@@ -320,7 +308,7 @@ static SVCCTL_EvtAckStatus_t RADAR_SERVER_EventHandler(void *p_Event)
  * @param  None
  * @retval None
  */
-void RADAR_SERVER_Init(void)
+void CONTROL_SERVICE_Init(void)
 {
   Char_UUID_t  uuid;
   tBleStatus ret;
@@ -333,40 +321,41 @@ void RADAR_SERVER_Init(void)
   /**
    *  Register the event handler to the BLE controller
    */
-  SVCCTL_RegisterSvcHandler(RADAR_SERVER_EventHandler);
+  SVCCTL_RegisterSvcHandler(CONTROL_SERVICE_EventHandler);
 
   /**
-   * Radar_Server
+   * Control_Service
    *
-   * Max_Attribute_Records = 1 + 2*2 + 1*no_of_char_with_notify_or_indicate_property + 1*no_of_char_with_broadcast_property
-   * service_max_attribute_record = 1 for Radar_Server +
-   *                                2 for A121_CONTROL +
-   *                                2 for A121_DATA +
-   *                                1 for A121_DATA configuration descriptor +
-   *                              = 6
+   * Max_Attribute_Records = 1 + 2*3 + 1*no_of_char_with_notify_or_indicate_property + 1*no_of_char_with_broadcast_property
+   * service_max_attribute_record = 1 for Control_Service +
+   *                                2 for ACTIVE_MODE +
+   *                                2 for SYSTEM_COMMAND +
+   *                                2 for SENSOR_STATUS +
+   *                                1 for SENSOR_STATUS configuration descriptor +
+   *                              = 8
    * This value doesn't take into account number of descriptors manually added
    * In case of descriptors added, please update the max_attr_record value accordingly in the next SVCCTL_InitService User Section
    */
-  max_attr_record = 6;
+  max_attr_record = 8;
 
   /* USER CODE BEGIN SVCCTL_InitService */
   /* max_attr_record to be updated if descriptors have been added */
 
   /* USER CODE END SVCCTL_InitService */
 
-  COPY_RADAR_SERVER_UUID(uuid.Char_UUID_128);
+  COPY_CONTROL_SERVICE_UUID(uuid.Char_UUID_128);
   ret = aci_gatt_add_service(UUID_TYPE_128,
                              (Service_UUID_t *) &uuid,
                              PRIMARY_SERVICE,
                              max_attr_record,
-                             &(RADAR_SERVER_Context.Radar_serverSvcHdle));
+                             &(CONTROL_SERVICE_Context.Control_serviceSvcHdle));
   if (ret != BLE_STATUS_SUCCESS)
   {
-    LOG_INFO_BLE("  Fail   : aci_gatt_add_service command: Radar_Server, error code: 0x%02X\n", ret);
+    LOG_INFO_BLE("  Fail   : aci_gatt_add_service command: Control_Service, error code: 0x%02X\n", ret);
   }
   else
   {
-    LOG_INFO_BLE("  Success: aci_gatt_add_service command: Radar_serverSvcHdle = 0x%04X\n",RADAR_SERVER_Context.Radar_serverSvcHdle);
+    LOG_INFO_BLE("  Success: aci_gatt_add_service command: Control_serviceSvcHdle = 0x%04X\n",CONTROL_SERVICE_Context.Control_serviceSvcHdle);
   }
 
   /* USER CODE BEGIN SVCCTL_InitService_2 */
@@ -374,26 +363,26 @@ void RADAR_SERVER_Init(void)
   /* USER CODE END SVCCTL_InitService_2 */
 
   /**
-   * A121_CONTROL
+   * ACTIVE_MODE
    */
-  COPY_A121_CONTROL_UUID(uuid.Char_UUID_128);
-  ret = aci_gatt_add_char(RADAR_SERVER_Context.Radar_serverSvcHdle,
+  COPY_ACTIVE_MODE_UUID(uuid.Char_UUID_128);
+  ret = aci_gatt_add_char(CONTROL_SERVICE_Context.Control_serviceSvcHdle,
                           UUID_TYPE_128,
                           (Char_UUID_t *) &uuid,
-                          SizeA121_Control,
+                          SizeActive_Mode,
                           CHAR_PROP_READ | CHAR_PROP_WRITE_WITHOUT_RESP,
                           ATTR_PERMISSION_NONE,
-                          GATT_NOTIFY_ATTRIBUTE_WRITE | GATT_NOTIFY_WRITE_REQ_AND_WAIT_FOR_APPL_RESP | GATT_NOTIFY_READ_REQ_AND_WAIT_FOR_APPL_RESP,
+                          GATT_NOTIFY_ATTRIBUTE_WRITE,
                           0x10,
                           CHAR_VALUE_LEN_VARIABLE,
-                          &(RADAR_SERVER_Context.A121_ControlCharHdle));
+                          &(CONTROL_SERVICE_Context.Active_ModeCharHdle));
   if (ret != BLE_STATUS_SUCCESS)
   {
-    LOG_INFO_BLE("  Fail   : aci_gatt_add_char command   : A121_CONTROL, error code: 0x%02X\n", ret);
+    LOG_INFO_BLE("  Fail   : aci_gatt_add_char command   : ACTIVE_MODE, error code: 0x%02X\n", ret);
   }
   else
   {
-    LOG_INFO_BLE("  Success: aci_gatt_add_char command   : A121_ControlCharHdle = 0x%04X\n",RADAR_SERVER_Context.A121_ControlCharHdle);
+    LOG_INFO_BLE("  Success: aci_gatt_add_char command   : Active_ModeCharHdle = 0x%04X\n",CONTROL_SERVICE_Context.Active_ModeCharHdle);
   }
 
   /* USER CODE BEGIN SVCCTL_InitService1Char1 */
@@ -402,32 +391,60 @@ void RADAR_SERVER_Init(void)
   /* USER CODE END SVCCTL_InitService1Char1 */
 
   /**
-   * A121_DATA
+   * SYSTEM_COMMAND
    */
-  COPY_A121_DATA_UUID(uuid.Char_UUID_128);
-  ret = aci_gatt_add_char(RADAR_SERVER_Context.Radar_serverSvcHdle,
+  COPY_SYSTEM_COMMAND_UUID(uuid.Char_UUID_128);
+  ret = aci_gatt_add_char(CONTROL_SERVICE_Context.Control_serviceSvcHdle,
                           UUID_TYPE_128,
                           (Char_UUID_t *) &uuid,
-                          SizeA121_Data,
-                          CHAR_PROP_NOTIFY,
+                          SizeSystem_Command,
+                          CHAR_PROP_WRITE_WITHOUT_RESP,
                           ATTR_PERMISSION_NONE,
                           GATT_NOTIFY_ATTRIBUTE_WRITE,
                           0x10,
                           CHAR_VALUE_LEN_VARIABLE,
-                          &(RADAR_SERVER_Context.A121_DataCharHdle));
+                          &(CONTROL_SERVICE_Context.System_CommandCharHdle));
   if (ret != BLE_STATUS_SUCCESS)
   {
-    LOG_INFO_BLE("  Fail   : aci_gatt_add_char command   : A121_DATA, error code: 0x%02X\n", ret);
+    LOG_INFO_BLE("  Fail   : aci_gatt_add_char command   : SYSTEM_COMMAND, error code: 0x%02X\n", ret);
   }
   else
   {
-    LOG_INFO_BLE("  Success: aci_gatt_add_char command   : A121_DataCharHdle = 0x%04X\n",RADAR_SERVER_Context.A121_DataCharHdle);
+    LOG_INFO_BLE("  Success: aci_gatt_add_char command   : System_CommandCharHdle = 0x%04X\n",CONTROL_SERVICE_Context.System_CommandCharHdle);
   }
 
   /* USER CODE BEGIN SVCCTL_InitService1Char2 */
   /* Place holder for Characteristic Descriptors */
 
   /* USER CODE END SVCCTL_InitService1Char2 */
+
+  /**
+   * SENSOR_STATUS
+   */
+  COPY_SENSOR_STATUS_UUID(uuid.Char_UUID_128);
+  ret = aci_gatt_add_char(CONTROL_SERVICE_Context.Control_serviceSvcHdle,
+                          UUID_TYPE_128,
+                          (Char_UUID_t *) &uuid,
+                          SizeSensor_Status,
+                          CHAR_PROP_READ | CHAR_PROP_NOTIFY,
+                          ATTR_PERMISSION_NONE,
+                          GATT_DONT_NOTIFY_EVENTS,
+                          0x10,
+                          CHAR_VALUE_LEN_VARIABLE,
+                          &(CONTROL_SERVICE_Context.Sensor_StatusCharHdle));
+  if (ret != BLE_STATUS_SUCCESS)
+  {
+    LOG_INFO_BLE("  Fail   : aci_gatt_add_char command   : SENSOR_STATUS, error code: 0x%02X\n", ret);
+  }
+  else
+  {
+    LOG_INFO_BLE("  Success: aci_gatt_add_char command   : Sensor_StatusCharHdle = 0x%04X\n",CONTROL_SERVICE_Context.Sensor_StatusCharHdle);
+  }
+
+  /* USER CODE BEGIN SVCCTL_InitService1Char3 */
+  /* Place holder for Characteristic Descriptors */
+
+  /* USER CODE END SVCCTL_InitService1Char3 */
 
   /* USER CODE BEGIN SVCCTL_InitService1Svc_2 */
 
@@ -442,7 +459,7 @@ void RADAR_SERVER_Init(void)
  * @param  pData: Structure holding data to update
  *
  */
-tBleStatus RADAR_SERVER_UpdateValue(RADAR_SERVER_CharOpcode_t CharOpcode, RADAR_SERVER_Data_t *pData)
+tBleStatus CONTROL_SERVICE_UpdateValue(CONTROL_SERVICE_CharOpcode_t CharOpcode, CONTROL_SERVICE_Data_t *pData)
 {
   tBleStatus ret = BLE_STATUS_INVALID_PARAMS;
   /* USER CODE BEGIN Service1_App_Update_Char_1 */
@@ -451,42 +468,61 @@ tBleStatus RADAR_SERVER_UpdateValue(RADAR_SERVER_CharOpcode_t CharOpcode, RADAR_
 
   switch(CharOpcode)
   {
-    case RADAR_SERVER_A121_CONTROL:
-      ret = aci_gatt_update_char_value(RADAR_SERVER_Context.Radar_serverSvcHdle,
-                                       RADAR_SERVER_Context.A121_ControlCharHdle,
+    case CONTROL_SERVICE_ACTIVE_MODE:
+      ret = aci_gatt_update_char_value(CONTROL_SERVICE_Context.Control_serviceSvcHdle,
+                                       CONTROL_SERVICE_Context.Active_ModeCharHdle,
                                        0, /* charValOffset */
                                        pData->Length, /* charValueLen */
                                        (uint8_t *)pData->p_Payload);
       if (ret != BLE_STATUS_SUCCESS)
       {
-        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value A121_CONTROL command, error code: 0x%02X\n", ret);
+        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value ACTIVE_MODE command, error code: 0x%02X\n", ret);
       }
       else
       {
-        LOG_INFO_BLE("  Success: aci_gatt_update_char_value A121_CONTROL command\n");
+        LOG_INFO_BLE("  Success: aci_gatt_update_char_value ACTIVE_MODE command\n");
       }
       /* USER CODE BEGIN Service1_Char_Value_1 */
 
       /* USER CODE END Service1_Char_Value_1 */
       break;
 
-    case RADAR_SERVER_A121_DATA:
-      ret = aci_gatt_update_char_value(RADAR_SERVER_Context.Radar_serverSvcHdle,
-                                       RADAR_SERVER_Context.A121_DataCharHdle,
+    case CONTROL_SERVICE_SYSTEM_COMMAND:
+      ret = aci_gatt_update_char_value(CONTROL_SERVICE_Context.Control_serviceSvcHdle,
+                                       CONTROL_SERVICE_Context.System_CommandCharHdle,
                                        0, /* charValOffset */
                                        pData->Length, /* charValueLen */
                                        (uint8_t *)pData->p_Payload);
       if (ret != BLE_STATUS_SUCCESS)
       {
-        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value A121_DATA command, error code: 0x%02X\n", ret);
+        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value SYSTEM_COMMAND command, error code: 0x%02X\n", ret);
       }
       else
       {
-        /* LOG_INFO_BLE("  Success: aci_gatt_update_char_value A121_DATA command\n"); */
+        LOG_INFO_BLE("  Success: aci_gatt_update_char_value SYSTEM_COMMAND command\n");
       }
       /* USER CODE BEGIN Service1_Char_Value_2 */
 
       /* USER CODE END Service1_Char_Value_2 */
+      break;
+
+    case CONTROL_SERVICE_SENSOR_STATUS:
+      ret = aci_gatt_update_char_value(CONTROL_SERVICE_Context.Control_serviceSvcHdle,
+                                       CONTROL_SERVICE_Context.Sensor_StatusCharHdle,
+                                       0, /* charValOffset */
+                                       pData->Length, /* charValueLen */
+                                       (uint8_t *)pData->p_Payload);
+      if (ret != BLE_STATUS_SUCCESS)
+      {
+        LOG_INFO_BLE("  Fail   : aci_gatt_update_char_value SENSOR_STATUS command, error code: 0x%02X\n", ret);
+      }
+      else
+      {
+        LOG_INFO_BLE("  Success: aci_gatt_update_char_value SENSOR_STATUS command\n");
+      }
+      /* USER CODE BEGIN Service1_Char_Value_3 */
+
+      /* USER CODE END Service1_Char_Value_3 */
       break;
 
     default:

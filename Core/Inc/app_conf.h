@@ -65,8 +65,8 @@
  */
 #define CFG_BD_ADDRESS_TYPE               (GAP_PUBLIC_ADDR)
 
-#define ADV_INTERVAL_MIN                  (80)
-#define ADV_INTERVAL_MAX                  (100)
+#define ADV_INTERVAL_MIN                  (160)
+#define ADV_INTERVAL_MAX                  (320)
 #define ADV_LP_INTERVAL_MIN               (1000)
 #define ADV_LP_INTERVAL_MAX               (2500)
 #define ADV_TYPE                          ADV_IND

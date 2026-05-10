@@ -38,8 +38,14 @@
 #include "advanced_memory_manager.h"
 #include "blestack.h"
 #include "simple_nvm_arbiter.h"
-#include "radar_server.h"
-#include "radar_server_app.h"
+#include "control_service.h"
+#include "control_service_app.h"
+#include "vital_sign_service.h"
+#include "vital_sign_service_app.h"
+#include "fall_service.h"
+#include "fall_service_app.h"
+#include "vibration_service.h"
+#include "vibration_service_app.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -166,7 +172,10 @@ static uint8_t a_BLE_CfgIrValue[16];
 /* Encryption root key used to derive LTK(Legacy) and CSRK */
 static uint8_t a_BLE_CfgErValue[16];
 static BleApplicationContext_t bleAppContext;
-RADAR_SERVER_APP_ConnHandleNotEvt_t RADAR_SERVERHandleNotification;
+CONTROL_SERVICE_APP_ConnHandleNotEvt_t CONTROL_SERVICEHandleNotification;
+VITAL_SIGN_SERVICE_APP_ConnHandleNotEvt_t VITAL_SIGN_SERVICEHandleNotification;
+FALL_SERVICE_APP_ConnHandleNotEvt_t FALL_SERVICEHandleNotification;
+VIBRATION_SERVICE_APP_ConnHandleNotEvt_t VIBRATION_SERVICEHandleNotification;
 
 static char a_GapDeviceName[] = {  't', 'e', 's', 't', '_', 's', 'e', 'n', 's', 'o', 'r' }; /* Gap Device Name */
 
@@ -310,7 +319,10 @@ void APP_BLE_Init(void)
     /* Initialize Services and Characteristics. */
     LOG_INFO_APP("\n");
     LOG_INFO_APP("Services and Characteristics creation\n");
-    RADAR_SERVER_APP_Init();
+    CONTROL_SERVICE_APP_Init();
+    VITAL_SIGN_SERVICE_APP_Init();
+    FALL_SERVICE_APP_Init();
+    VIBRATION_SERVICE_APP_Init();
     LOG_INFO_APP("End of Services and Characteristics creation\n");
     LOG_INFO_APP("\n");
 
@@ -413,9 +425,18 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE_1 */
 
       /* USER CODE END EVT_DISCONN_COMPLETE_1 */
-      RADAR_SERVERHandleNotification.EvtOpcode = RADAR_SERVER_DISCON_HANDLE_EVT;
-      RADAR_SERVERHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
-      RADAR_SERVER_APP_EvtRx(&RADAR_SERVERHandleNotification);
+      CONTROL_SERVICEHandleNotification.EvtOpcode = CONTROL_SERVICE_DISCON_HANDLE_EVT;
+      VITAL_SIGN_SERVICEHandleNotification.EvtOpcode = VITAL_SIGN_SERVICE_DISCON_HANDLE_EVT;
+      FALL_SERVICEHandleNotification.EvtOpcode = FALL_SERVICE_DISCON_HANDLE_EVT;
+      VIBRATION_SERVICEHandleNotification.EvtOpcode = VIBRATION_SERVICE_DISCON_HANDLE_EVT;
+      CONTROL_SERVICEHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
+      VITAL_SIGN_SERVICEHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
+      FALL_SERVICEHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
+      VIBRATION_SERVICEHandleNotification.ConnectionHandle = p_disconnection_complete_event->Connection_Handle;
+      CONTROL_SERVICE_APP_EvtRx(&CONTROL_SERVICEHandleNotification);
+      VITAL_SIGN_SERVICE_APP_EvtRx(&VITAL_SIGN_SERVICEHandleNotification);
+      FALL_SERVICE_APP_EvtRx(&FALL_SERVICEHandleNotification);
+      VIBRATION_SERVICE_APP_EvtRx(&VIBRATION_SERVICEHandleNotification);
       /* USER CODE BEGIN EVT_DISCONN_COMPLETE */
       /* Restart advertising immediately on disconnect */
       APP_BLE_Procedure_Gap_Peripheral(PROC_GAP_PERIPH_ADVERTISE_START_FAST);
@@ -516,9 +537,18 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           }
           bleAppContext.connectionHandle = p_enhanced_conn_complete->Connection_Handle;
 
-          RADAR_SERVERHandleNotification.EvtOpcode = RADAR_SERVER_CONN_HANDLE_EVT;
-          RADAR_SERVERHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
-          RADAR_SERVER_APP_EvtRx(&RADAR_SERVERHandleNotification);
+          CONTROL_SERVICEHandleNotification.EvtOpcode = CONTROL_SERVICE_CONN_HANDLE_EVT;
+          VITAL_SIGN_SERVICEHandleNotification.EvtOpcode = VITAL_SIGN_SERVICE_CONN_HANDLE_EVT;
+          FALL_SERVICEHandleNotification.EvtOpcode = FALL_SERVICE_CONN_HANDLE_EVT;
+          VIBRATION_SERVICEHandleNotification.EvtOpcode = VIBRATION_SERVICE_CONN_HANDLE_EVT;
+          CONTROL_SERVICEHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
+          VITAL_SIGN_SERVICEHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
+          FALL_SERVICEHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
+          VIBRATION_SERVICEHandleNotification.ConnectionHandle = p_enhanced_conn_complete->Connection_Handle;
+          CONTROL_SERVICE_APP_EvtRx(&CONTROL_SERVICEHandleNotification);
+          VITAL_SIGN_SERVICE_APP_EvtRx(&VITAL_SIGN_SERVICEHandleNotification);
+          FALL_SERVICE_APP_EvtRx(&FALL_SERVICEHandleNotification);
+          VIBRATION_SERVICE_APP_EvtRx(&VIBRATION_SERVICEHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_ENHANCED_CONN_COMPLETE */
           /* The connection is done, there is no need anymore to schedule the LP ADV */
           UTIL_TIMER_Stop(&(bleAppContext.Advertising_mgr_timer_Id));
@@ -561,9 +591,18 @@ SVCCTL_UserEvtFlowStatus_t SVCCTL_App_Notification(void *p_Pckt)
           }
           bleAppContext.connectionHandle = p_conn_complete->Connection_Handle;
 
-          RADAR_SERVERHandleNotification.EvtOpcode = RADAR_SERVER_CONN_HANDLE_EVT;
-          RADAR_SERVERHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
-          RADAR_SERVER_APP_EvtRx(&RADAR_SERVERHandleNotification);
+          CONTROL_SERVICEHandleNotification.EvtOpcode = CONTROL_SERVICE_CONN_HANDLE_EVT;
+          VITAL_SIGN_SERVICEHandleNotification.EvtOpcode = VITAL_SIGN_SERVICE_CONN_HANDLE_EVT;
+          FALL_SERVICEHandleNotification.EvtOpcode = FALL_SERVICE_CONN_HANDLE_EVT;
+          VIBRATION_SERVICEHandleNotification.EvtOpcode = VIBRATION_SERVICE_CONN_HANDLE_EVT;
+          CONTROL_SERVICEHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
+          VITAL_SIGN_SERVICEHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
+          FALL_SERVICEHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
+          VIBRATION_SERVICEHandleNotification.ConnectionHandle = p_conn_complete->Connection_Handle;
+          CONTROL_SERVICE_APP_EvtRx(&CONTROL_SERVICEHandleNotification);
+          VITAL_SIGN_SERVICE_APP_EvtRx(&VITAL_SIGN_SERVICEHandleNotification);
+          FALL_SERVICE_APP_EvtRx(&FALL_SERVICEHandleNotification);
+          VIBRATION_SERVICE_APP_EvtRx(&VIBRATION_SERVICEHandleNotification);
           /* USER CODE BEGIN HCI_EVT_LE_CONN_COMPLETE */
           /* The connection is done, there is no need anymore to schedule the LP ADV */
           UTIL_TIMER_Stop(&(bleAppContext.Advertising_mgr_timer_Id));

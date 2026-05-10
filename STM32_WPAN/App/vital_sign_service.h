@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    Radar_Server.h
+  * @file    Vital_Sign_Service.h
   * @author  MCD Application Team
-  * @brief   Header for Radar_Server.c
+  * @brief   Header for Vital_Sign_Service.c
   ******************************************************************************
   * @attention
   *
@@ -19,8 +19,8 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef RADAR_SERVER_H
-#define RADAR_SERVER_H
+#ifndef VITAL_SIGN_SERVICE_H
+#define VITAL_SIGN_SERVICE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,47 +42,50 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 typedef enum
 {
-  RADAR_SERVER_A121_CONTROL,
-  RADAR_SERVER_A121_DATA,
-  /* USER CODE BEGIN Service1_CharOpcode_t */
+  VITAL_SIGN_SERVICE_DISTANCE_CONFIG,
+  VITAL_SIGN_SERVICE_VITAL_DATA,
+  VITAL_SIGN_SERVICE_WAVEFORM,
+  /* USER CODE BEGIN Service2_CharOpcode_t */
 
-  /* USER CODE END Service1_CharOpcode_t */
-  RADAR_SERVER_CHAROPCODE_LAST
-} RADAR_SERVER_CharOpcode_t;
+  /* USER CODE END Service2_CharOpcode_t */
+  VITAL_SIGN_SERVICE_CHAROPCODE_LAST
+} VITAL_SIGN_SERVICE_CharOpcode_t;
 
 typedef enum
 {
-  RADAR_SERVER_A121_CONTROL_READ_EVT,
-  RADAR_SERVER_A121_CONTROL_WRITE_NO_RESP_EVT,
-  RADAR_SERVER_A121_DATA_NOTIFY_ENABLED_EVT,
-  RADAR_SERVER_A121_DATA_NOTIFY_DISABLED_EVT,
-  /* USER CODE BEGIN Service1_OpcodeEvt_t */
+  VITAL_SIGN_SERVICE_DISTANCE_CONFIG_READ_EVT,
+  VITAL_SIGN_SERVICE_DISTANCE_CONFIG_WRITE_EVT,
+  VITAL_SIGN_SERVICE_VITAL_DATA_NOTIFY_ENABLED_EVT,
+  VITAL_SIGN_SERVICE_VITAL_DATA_NOTIFY_DISABLED_EVT,
+  VITAL_SIGN_SERVICE_WAVEFORM_NOTIFY_ENABLED_EVT,
+  VITAL_SIGN_SERVICE_WAVEFORM_NOTIFY_DISABLED_EVT,
+  /* USER CODE BEGIN Service2_OpcodeEvt_t */
 
-  /* USER CODE END Service1_OpcodeEvt_t */
-  RADAR_SERVER_BOOT_REQUEST_EVT
-} RADAR_SERVER_OpcodeEvt_t;
+  /* USER CODE END Service2_OpcodeEvt_t */
+  VITAL_SIGN_SERVICE_BOOT_REQUEST_EVT
+} VITAL_SIGN_SERVICE_OpcodeEvt_t;
 
 typedef struct
 {
   uint8_t *p_Payload;
   uint8_t Length;
 
-  /* USER CODE BEGIN Service1_Data_t */
+  /* USER CODE BEGIN Service2_Data_t */
 
-  /* USER CODE END Service1_Data_t */
-} RADAR_SERVER_Data_t;
+  /* USER CODE END Service2_Data_t */
+} VITAL_SIGN_SERVICE_Data_t;
 
 typedef struct
 {
-  RADAR_SERVER_OpcodeEvt_t       EvtOpcode;
-  RADAR_SERVER_Data_t             DataTransfered;
+  VITAL_SIGN_SERVICE_OpcodeEvt_t       EvtOpcode;
+  VITAL_SIGN_SERVICE_Data_t             DataTransfered;
   uint16_t                ConnectionHandle;
   uint16_t                AttributeHandle;
   uint8_t                 ServiceInstance;
-  /* USER CODE BEGIN Service1_NotificationEvt_t */
+  /* USER CODE BEGIN Service2_NotificationEvt_t */
 
-  /* USER CODE END Service1_NotificationEvt_t */
-} RADAR_SERVER_NotificationEvt_t;
+  /* USER CODE END Service2_NotificationEvt_t */
+} VITAL_SIGN_SERVICE_NotificationEvt_t;
 
 /* USER CODE BEGIN ET */
 
@@ -104,9 +107,9 @@ typedef struct
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
-void RADAR_SERVER_Init(void);
-void RADAR_SERVER_Notification(RADAR_SERVER_NotificationEvt_t *p_Notification);
-tBleStatus RADAR_SERVER_UpdateValue(RADAR_SERVER_CharOpcode_t CharOpcode, RADAR_SERVER_Data_t *pData);
+void VITAL_SIGN_SERVICE_Init(void);
+void VITAL_SIGN_SERVICE_Notification(VITAL_SIGN_SERVICE_NotificationEvt_t *p_Notification);
+tBleStatus VITAL_SIGN_SERVICE_UpdateValue(VITAL_SIGN_SERVICE_CharOpcode_t CharOpcode, VITAL_SIGN_SERVICE_Data_t *pData);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -115,4 +118,4 @@ tBleStatus RADAR_SERVER_UpdateValue(RADAR_SERVER_CharOpcode_t CharOpcode, RADAR_
 }
 #endif
 
-#endif /*RADAR_SERVER_H */
+#endif /*VITAL_SIGN_SERVICE_H */

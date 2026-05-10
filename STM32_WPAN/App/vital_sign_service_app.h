@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    Radar_Server_app.h
+  * @file    Vital_Sign_Service_app.h
   * @author  MCD Application Team
-  * @brief   Header for Radar_Server_app.c
+  * @brief   Header for Vital_Sign_Service_app.c
   ******************************************************************************
   * @attention
   *
@@ -19,8 +19,8 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef RADAR_SERVER_APP_H
-#define RADAR_SERVER_APP_H
+#ifndef VITAL_SIGN_SERVICE_APP_H
+#define VITAL_SIGN_SERVICE_APP_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,25 +36,25 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 typedef enum
 {
-  RADAR_SERVER_CONN_HANDLE_EVT,
-  RADAR_SERVER_DISCON_HANDLE_EVT,
+  VITAL_SIGN_SERVICE_CONN_HANDLE_EVT,
+  VITAL_SIGN_SERVICE_DISCON_HANDLE_EVT,
 
-  /* USER CODE BEGIN Service1_OpcodeNotificationEvt_t */
+  /* USER CODE BEGIN Service2_OpcodeNotificationEvt_t */
 
-  /* USER CODE END Service1_OpcodeNotificationEvt_t */
+  /* USER CODE END Service2_OpcodeNotificationEvt_t */
 
-  RADAR_SERVER_LAST_EVT,
-} RADAR_SERVER_APP_OpcodeNotificationEvt_t;
+  VITAL_SIGN_SERVICE_LAST_EVT,
+} VITAL_SIGN_SERVICE_APP_OpcodeNotificationEvt_t;
 
 typedef struct
 {
-  RADAR_SERVER_APP_OpcodeNotificationEvt_t          EvtOpcode;
+  VITAL_SIGN_SERVICE_APP_OpcodeNotificationEvt_t          EvtOpcode;
   uint16_t                                 ConnectionHandle;
 
-  /* USER CODE BEGIN RADAR_SERVER_APP_ConnHandleNotEvt_t */
+  /* USER CODE BEGIN VITAL_SIGN_SERVICE_APP_ConnHandleNotEvt_t */
 
-  /* USER CODE END RADAR_SERVER_APP_ConnHandleNotEvt_t */
-} RADAR_SERVER_APP_ConnHandleNotEvt_t;
+  /* USER CODE END VITAL_SIGN_SERVICE_APP_ConnHandleNotEvt_t */
+} VITAL_SIGN_SERVICE_APP_ConnHandleNotEvt_t;
 /* USER CODE BEGIN ET */
 
 /* USER CODE END ET */
@@ -75,8 +75,8 @@ typedef struct
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
-void RADAR_SERVER_APP_Init(void);
-void RADAR_SERVER_APP_EvtRx(RADAR_SERVER_APP_ConnHandleNotEvt_t *p_Notification);
+void VITAL_SIGN_SERVICE_APP_Init(void);
+void VITAL_SIGN_SERVICE_APP_EvtRx(VITAL_SIGN_SERVICE_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -85,4 +85,4 @@ void RADAR_SERVER_APP_EvtRx(RADAR_SERVER_APP_ConnHandleNotEvt_t *p_Notification)
 }
 #endif
 
-#endif /*RADAR_SERVER_APP_H */
+#endif /*VITAL_SIGN_SERVICE_APP_H */
