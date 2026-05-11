@@ -1,0 +1,11 @@
+
+The libraries in this package was built with the following configuration:
+
+Compiler version:
+    arm-none-eabi-gcc (Arm GNU Toolchain 13.3.Rel1 (Build arm-13.24)) 13.3.1 20240614 
+
+Compiler flags:
+    -mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16 -DTARGET_ARCH_cm33 -DFLOAT_ABI_HARD
+    -std=c99 -pedantic -Wall -Werror -Wextra -Wdouble-promotion -Wstrict-prototypes -Wcast-qual
+    -Wmissing-prototypes -Winit-self -Wpointer-arith -Wshadow -MMD -MP -O2 -g -fno-math-errno
+    -ffunction-sections -fdata-sections

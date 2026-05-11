@@ -1,0 +1,819 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.6">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #0f7001; -webkit-text-stroke: #0f7001}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #0000ff; -webkit-text-stroke: #0000ff}
+    p.p3 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #9d00d2; -webkit-text-stroke: #9d00d2}
+    p.p4 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #2d2d2d; -webkit-text-stroke: #2d2d2d; min-height: 25.0px}
+    p.p5 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #900112; -webkit-text-stroke: #900112}
+    p.p6 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #206c87; -webkit-text-stroke: #206c87}
+    p.p7 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #00006d; -webkit-text-stroke: #00006d}
+    p.p8 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #654c1d; -webkit-text-stroke: #654c1d}
+    p.p9 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #2d2d2d; -webkit-text-stroke: #0000ff}
+    p.p10 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #2d2d2d; -webkit-text-stroke: #2d2d2d}
+    p.p11 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #2d2d2d; -webkit-text-stroke: #654c1d}
+    p.p12 {margin: 0.0px 0.0px 0.0px 0.0px; font: 22.0px Menlo; color: #0b5ab4; -webkit-text-stroke: #0b5ab4}
+    span.s1 {font-kerning: none; background-color: #ffffff}
+    span.s2 {font-kerning: none; color: #0000ff; background-color: #ffffff; -webkit-text-stroke: 0px #0000ff}
+    span.s3 {font-kerning: none; color: #0f7001; background-color: #ffffff; -webkit-text-stroke: 0px #0f7001}
+    span.s4 {font-kerning: none; color: #900112; background-color: #ffffff; -webkit-text-stroke: 0px #900112}
+    span.s5 {font-kerning: none}
+    span.s6 {font-kerning: none; color: #9d00d2; background-color: #ffffff; -webkit-text-stroke: 0px #9d00d2}
+    span.s7 {font-kerning: none; color: #2d2d2d; background-color: #ffffff; -webkit-text-stroke: 0px #2d2d2d}
+    span.s8 {font-kerning: none; color: #00006d; background-color: #ffffff; -webkit-text-stroke: 0px #00006d}
+    span.s9 {font-kerning: none; color: #206c87; background-color: #ffffff; -webkit-text-stroke: 0px #206c87}
+    span.s10 {font-kerning: none; color: #654c1d; background-color: #ffffff; -webkit-text-stroke: 0px #654c1d}
+    span.s11 {font-kerning: none; color: #0000ff; background-color: #ffffff}
+    span.s12 {font-kerning: none; background-color: #ffffff; -webkit-text-stroke: 0px #2d2d2d}
+    span.s13 {font-kerning: none; background-color: #ffffff; -webkit-text-stroke: 0px #000000}
+    span.s14 {font-kerning: none; color: #137646; background-color: #ffffff; -webkit-text-stroke: 0px #137646}
+    span.s15 {font-kerning: none; color: #0b5ab4; background-color: #ffffff; -webkit-text-stroke: 0px #0b5ab4}
+    span.s16 {font-kerning: none; color: #2d2d2d; background-color: #ffffff; -webkit-text-stroke: 0px #000000}
+    span.s17 {font-kerning: none; color: #654c1d; background-color: #ffffff}
+    span.s18 {font-kerning: none; color: #e60006; background-color: #ffffff; -webkit-text-stroke: 0px #e60006}
+  </style>
+</head>
+<body>
+<p class="p1"><span class="s1">/* USER CODE BEGIN Header */</span></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>******************************************************************************</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@file</span><span class="s1"> <span class="Apple-converted-space">          </span>: main.c</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"><span class="Apple-converted-space">          </span>: Main program body</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>******************************************************************************</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@attention</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* Copyright (c) 2026 STMicroelectronics.</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* All rights reserved.</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* This software is licensed under terms that can be found in the LICENSE file</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* in the root directory of this software component.</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* If no LICENSE file comes with this software, it is provided AS-IS.</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>******************************************************************************</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p1"><span class="s1">/* USER CODE END Header */</span></p>
+<p class="p1"><span class="s1">/* Includes ------------------------------------------------------------------*/</span></p>
+<p class="p3"><span class="s1">#include</span><span class="s2"> </span><span class="s4">"main.h"</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* Private includes ----------------------------------------------------------*/</span></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN Includes */</span></p>
+<p class="p5"><span class="s6">#include</span><span class="s2"> </span><span class="s1">&lt;stdio.h&gt;</span></p>
+<p class="p1"><span class="s1">// #include "example_detector_distance.h"</span></p>
+<p class="p1"><span class="s1">// #include "example_bring_up.h"</span></p>
+<p class="p5"><span class="s6">#include</span><span class="s2"> </span><span class="s1">"example_service.h"</span></p>
+<p class="p1"><span class="s1">/* USER CODE END Includes */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* Private typedef -----------------------------------------------------------*/</span></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN PTD */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* USER CODE END PTD */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* Private define ------------------------------------------------------------*/</span></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN PD */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* USER CODE END PD */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* Private macro -------------------------------------------------------------*/</span></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN PM */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* USER CODE END PM */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* Private variables ---------------------------------------------------------*/</span></p>
+<p class="p6"><span class="s1">ADC_HandleTypeDef</span><span class="s7"> </span><span class="s8">hadc4</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s1">CRC_HandleTypeDef</span><span class="s7"> </span><span class="s8">hcrc</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s1">RAMCFG_HandleTypeDef</span><span class="s7"> </span><span class="s8">hramcfg_SRAM1</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s1">RNG_HandleTypeDef</span><span class="s7"> </span><span class="s8">hrng</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s1">RTC_HandleTypeDef</span><span class="s7"> </span><span class="s8">hrtc</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s1">SPI_HandleTypeDef</span><span class="s7"> </span><span class="s8">hspi2</span><span class="s7">;</span></p>
+<p class="p7"><span class="s9">DMA_NodeTypeDef</span><span class="s7"> </span><span class="s1">Node_GPDMA1_Channel1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s9">DMA_QListTypeDef</span><span class="s7"> </span><span class="s1">List_GPDMA1_Channel1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s9">DMA_HandleTypeDef</span><span class="s7"> </span><span class="s1">handle_GPDMA1_Channel1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s9">DMA_HandleTypeDef</span><span class="s7"> </span><span class="s1">handle_GPDMA1_Channel0</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s1">UART_HandleTypeDef</span><span class="s7"> </span><span class="s8">huart1</span><span class="s7">;</span></p>
+<p class="p6"><span class="s1">UART_HandleTypeDef</span><span class="s7"> </span><span class="s8">huart2</span><span class="s7">;</span></p>
+<p class="p7"><span class="s9">DMA_HandleTypeDef</span><span class="s7"> </span><span class="s1">handle_GPDMA1_Channel3</span><span class="s7">;</span></p>
+<p class="p7"><span class="s9">DMA_HandleTypeDef</span><span class="s7"> </span><span class="s1">handle_GPDMA1_Channel2</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN PV */</span></p>
+<p class="p1"><span class="s1">// volatile uint32_t debug_stage = 0;</span></p>
+<p class="p1"><span class="s1">/* USER CODE END PV */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* Private function prototypes -----------------------------------------------*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">SystemClock_Config</span><span class="s7">(</span><span class="s2">void</span><span class="s7">);</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">PeriphCommonClock_Config</span><span class="s7">(</span><span class="s2">void</span><span class="s7">);</span></p>
+<p class="p2"><span class="s1">static</span><span class="s7"> </span><span class="s1">void</span><span class="s7"> </span><span class="s10">MX_GPIO_Init</span><span class="s7">(</span><span class="s1">void</span><span class="s7">);</span></p>
+<p class="p8"><span class="s2">static</span><span class="s7"> </span><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_GPDMA1_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">);</span></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN PFP */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* USER CODE END PFP */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* Private user code ---------------------------------------------------------*/</span></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN 0 */</span></p>
+<p class="p1"><span class="s1">// Send printf to uart1</span></p>
+<p class="p9"><span class="s11">int</span><span class="s12"> </span><span class="s10">_write</span><span class="s12">(</span><span class="s11">int</span><span class="s12"> </span><span class="s8">fd</span><span class="s12">, </span><span class="s11">char</span><span class="s13">*</span><span class="s12"> </span><span class="s8">ptr</span><span class="s12">, </span><span class="s11">int</span><span class="s12"> </span><span class="s8">len</span><span class="s12">) {</span></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">HAL_StatusTypeDef</span><span class="s7"> </span><span class="s8">hstatus</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s1"> (</span><span class="s8">fd</span><span class="s1"> </span><span class="s13">==</span><span class="s1"> </span><span class="s14">1</span><span class="s1"> </span><span class="s13">||</span><span class="s1"> </span><span class="s8">fd</span><span class="s1"> </span><span class="s13">==</span><span class="s1"> </span><span class="s14">2</span><span class="s1">) {</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">    </span></span><span class="s8">hstatus</span><span class="s1"> </span><span class="s13">=</span><span class="s1"> </span><span class="s10">HAL_UART_Transmit</span><span class="s1">(</span><span class="s13">&amp;</span><span class="s8">huart1</span><span class="s1">, (</span><span class="s9">uint8_t</span><span class="s1"> </span><span class="s13">*</span><span class="s1">) </span><span class="s8">ptr</span><span class="s1">, </span><span class="s8">len</span><span class="s1">, </span><span class="s2">HAL_MAX_DELAY</span><span class="s1">);</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">    </span></span><span class="s6">if</span><span class="s1"> (</span><span class="s8">hstatus</span><span class="s1"> </span><span class="s13">==</span><span class="s1"> </span><span class="s15">HAL_OK</span><span class="s1">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">      </span></span><span class="s6">return</span><span class="s1"> </span><span class="s8">len</span><span class="s1">;</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">    </span></span><span class="s6">else</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">      </span></span><span class="s6">return</span><span class="s1"> </span><span class="s13">-</span><span class="s14">1</span><span class="s1">;</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p3"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">return</span><span class="s7"> </span><span class="s16">-</span><span class="s14">1</span><span class="s7">;</span></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p1"><span class="s1">/* USER CODE END 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"><span class="Apple-converted-space">  </span>The application entry point.</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> int</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s1">int</span><span class="s7"> </span><span class="s10">main</span><span class="s7">(</span><span class="s1">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* MCU Configuration--------------------------------------------------------*/</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Reset of all peripherals, Initializes the Flash interface and the Systick. */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">HAL_Init</span><span class="s7">();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Config code for STM32_WPAN (HSE Tuning must be done before system clock configuration) */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_APPE_Config</span><span class="s7">();</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN Init */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END Init */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Configure the system clock */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">SystemClock_Config</span><span class="s7">();</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Configure the peripherals common clocks */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">PeriphCommonClock_Config</span><span class="s7">();</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN SysInit */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END SysInit */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Initialize all configured peripherals */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_GPIO_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_GPDMA1_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_RAMCFG_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_RTC_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_USART1_UART_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_USART2_UART_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_SPI2_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_RNG_Init</span><span class="s7">();</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_ICACHE_Init</span><span class="s7">();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN 2 */</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">// acc_example_detector_distance(0, NULL);</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">// acc_example_bring_up(0, NULL);</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">acc_example_service</span><span class="s7">(</span><span class="s14">0</span><span class="s7">, </span><span class="s2">NULL</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Init code for STM32_WPAN */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">MX_APPE_Init</span><span class="s7">(</span><span class="s2">NULL</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Infinite loop */</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN WHILE */</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">// RTC_TimeTypeDef sTime;</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">// RTC_DateTypeDef sDate;</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span></span><span class="s6">while</span><span class="s1"> (</span><span class="s14">1</span><span class="s1">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// /* RTC using LSE*/</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// // 1. Get the time</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// HAL_RTC_GetTime(&amp;hrtc, &amp;sTime, RTC_FORMAT_BIN);</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// // 2. Get the date (REQUIRED to unlock the registers)</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// HAL_RTC_GetDate(&amp;hrtc, &amp;sDate, RTC_FORMAT_BIN);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// // 3. Print to UART</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// printf("%02d:%02d:%02d\r\n", sTime.Hours, sTime.Minutes, sTime.Seconds);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// HAL_Delay(1000);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// // Check if HSE is stable and ready</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// if (LL_RCC_HSE_IsReady()) {</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// <span class="Apple-converted-space">    </span>// HSE is working</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// } else {</span></p>
+<p class="p1"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">// <span class="Apple-converted-space">    </span>// HSE failed to start or stabilize</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">    </span></span><span class="s3">// }</span></p>
+<p class="p4"><span class="s1"><span class="Apple-converted-space">    </span></span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>/* USER CODE END WHILE */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">MX_APPE_Process</span><span class="s7">();</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">    </span>/* USER CODE BEGIN 3 */</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END 3 */</span></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> System Clock Configuration</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">SystemClock_Config</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_OscInitTypeDef</span><span class="s7"> </span><span class="s8">RCC_OscInitStruct</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> {</span><span class="s14">0</span><span class="s7">};</span></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitTypeDef</span><span class="s7"> </span><span class="s8">RCC_ClkInitStruct</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> {</span><span class="s14">0</span><span class="s7">};</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Configure the main internal regulator output voltage</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_PWREx_ControlVoltageScaling</span><span class="s7">(</span><span class="s2">PWR_REGULATOR_VOLTAGE_SCALE1</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Configure LSE Drive Capability</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">HAL_PWR_EnableBkUpAccess</span><span class="s7">();</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">__HAL_RCC_LSEDRIVE_CONFIG</span><span class="s7">(</span><span class="s1">RCC_LSEDRIVE_MEDIUMLOW</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Initializes the CPU, AHB and APB busses clocks</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">RCC_OscInitStruct</span><span class="s7">.</span><span class="s8">OscillatorType</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RCC_OSCILLATORTYPE_HSI</span><span class="s16">|</span><span class="s1">RCC_OSCILLATORTYPE_HSE</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">                              </span></span><span class="s13">|</span><span class="s2">RCC_OSCILLATORTYPE_LSE</span><span class="s1">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_OscInitStruct</span><span class="s7">.</span><span class="s1">HSEState</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_HSE_ON</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_OscInitStruct</span><span class="s7">.</span><span class="s1">HSEDiv</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_HSE_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_OscInitStruct</span><span class="s7">.</span><span class="s1">LSEState</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_LSE_ON</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_OscInitStruct</span><span class="s7">.</span><span class="s1">HSIState</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_HSI_ON</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_OscInitStruct</span><span class="s7">.</span><span class="s1">HSICalibrationValue</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_HSICALIBRATION_DEFAULT</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_OscInitStruct</span><span class="s7">.</span><span class="s1">PLL1</span><span class="s7">.</span><span class="s1">PLLState</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_PLL_NONE</span><span class="s7">;</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RCC_OscConfig</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">RCC_OscInitStruct</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Initializes the CPU, AHB and APB busses clocks</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s8">ClockType</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RCC_CLOCKTYPE_HCLK</span><span class="s16">|</span><span class="s1">RCC_CLOCKTYPE_SYSCLK</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">                              </span></span><span class="s16">|</span><span class="s1">RCC_CLOCKTYPE_PCLK1</span><span class="s16">|</span><span class="s1">RCC_CLOCKTYPE_PCLK2</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">                              </span></span><span class="s16">|</span><span class="s1">RCC_CLOCKTYPE_PCLK7</span><span class="s16">|</span><span class="s1">RCC_CLOCKTYPE_HCLK5</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s1">SYSCLKSource</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_SYSCLKSOURCE_HSE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s1">AHBCLKDivider</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_SYSCLK_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s1">APB1CLKDivider</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_HCLK_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s1">APB2CLKDivider</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_HCLK_DIV2</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s1">APB7CLKDivider</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_HCLK_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s1">AHB5_PLL1_CLKDivider</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_SYSCLK_PLL1_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_ClkInitStruct</span><span class="s7">.</span><span class="s1">AHB5_HSEHSI_CLKDivider</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_SYSCLK_HSEHSI_DIV1</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RCC_ClockConfig</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">RCC_ClkInitStruct</span><span class="s7">, </span><span class="s2">FLASH_LATENCY_0</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">   </span>/* Select SysTick source clock */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">HAL_SYSTICK_CLKSourceConfig</span><span class="s7">(</span><span class="s2">SYSTICK_CLKSOURCE_LSE</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">   </span>/* Re-Initialize Tick with new clock source */</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s10">HAL_InitTick</span><span class="s7">(</span><span class="s1">TICK_INT_PRIORITY</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> Peripherals Common Clock Configuration</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">PeriphCommonClock_Config</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RCC_PeriphCLKInitTypeDef</span><span class="s7"> </span><span class="s8">PeriphClkInit</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> {</span><span class="s14">0</span><span class="s7">};</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Initializes the peripherals clock</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">PeriphClkInit</span><span class="s7">.</span><span class="s1">PeriphClockSelection</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_PERIPHCLK_RADIOST</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">PeriphClkInit</span><span class="s7">.</span><span class="s1">RadioSlpTimClockSelection</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RCC_RADIOSTCLKSOURCE_LSE</span><span class="s7">;</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RCCEx_PeriphCLKConfig</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">PeriphClkInit</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> ADC4 Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_ADC4_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN ADC4_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END ADC4_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">ADC_ChannelConfTypeDef</span><span class="s7"> </span><span class="s8">sConfig</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> {</span><span class="s14">0</span><span class="s7">};</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN ADC4_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END ADC4_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Common config</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC4</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ClockPrescaler</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_CLOCK_ASYNC_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">Resolution</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_RESOLUTION_12B</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hadc4</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">DataAlign</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">ADC_DATAALIGN_RIGHT</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ScanConvMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_SCAN_DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">EOCSelection</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_EOC_SINGLE_CONV</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">LowPowerAutoPowerOff</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s15">DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">LowPowerAutonomousDPD</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_LP_AUTONOMOUS_DPD_DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">LowPowerAutoWait</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s15">DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ContinuousConvMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s15">DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">NbrOfConversion</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s14">1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ExternalTrigConv</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_SOFTWARE_START</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ExternalTrigConvEdge</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_EXTERNALTRIGCONVEDGE_NONE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">DMAContinuousRequests</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s15">DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">TriggerFrequencyMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_TRIGGER_FREQ_LOW</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hadc4</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">Overrun</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">ADC_OVR_DATA_PRESERVED</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">SamplingTimeCommon1</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_SAMPLETIME_814CYCLES_5</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">SamplingTimeCommon2</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">ADC_SAMPLETIME_1CYCLE_5</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hadc4</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">OversamplingMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s15">DISABLE</span><span class="s7">;</span></p>
+<p class="p11"><span class="s12"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s12"> (</span><span class="s17">HAL_ADC_Init</span><span class="s12">(</span><span class="s13">&amp;</span><span class="s8">hadc4</span><span class="s12">) </span><span class="s13">!=</span><span class="s12"> </span><span class="s15">HAL_OK</span><span class="s12">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Configure Regular Channel</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">sConfig</span><span class="s7">.</span><span class="s8">Channel</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">ADC_CHANNEL_TEMPSENSOR</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">sConfig</span><span class="s7">.</span><span class="s8">Rank</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">ADC_REGULAR_RANK_1</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">sConfig</span><span class="s7">.</span><span class="s8">SamplingTime</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">ADC_SAMPLINGTIME_COMMON_1</span><span class="s7">;</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_ADC_ConfigChannel</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">hadc4</span><span class="s7">, </span><span class="s16">&amp;</span><span class="s8">sConfig</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN ADC4_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END ADC4_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> CRC Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_CRC_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN CRC_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END CRC_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN CRC_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END CRC_Init 1 */</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hcrc</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">CRC</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hcrc</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">DefaultPolynomialUse</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">DEFAULT_POLYNOMIAL_DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hcrc</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">DefaultInitValueUse</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">DEFAULT_INIT_VALUE_ENABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hcrc</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">GeneratingPolynomial</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s14">7607</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hcrc</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">CRCLength</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">CRC_POLYLENGTH_16B</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hcrc</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">InputDataInversionMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">CRC_INPUTDATA_INVERSION_NONE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hcrc</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OutputDataInversionMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">CRC_OUTPUTDATA_INVERSION_DISABLE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hcrc</span><span class="s7">.</span><span class="s8">InputDataFormat</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">CRC_INPUTDATA_FORMAT_WORDS</span><span class="s7">;</span></p>
+<p class="p11"><span class="s12"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s12"> (</span><span class="s17">HAL_CRC_Init</span><span class="s12">(</span><span class="s13">&amp;</span><span class="s8">hcrc</span><span class="s12">) </span><span class="s13">!=</span><span class="s12"> </span><span class="s15">HAL_OK</span><span class="s12">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN CRC_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END CRC_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> GPDMA1 Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">static</span><span class="s7"> </span><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_GPDMA1_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN GPDMA1_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END GPDMA1_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Peripheral clock enable */</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">__HAL_RCC_GPDMA1_CLK_ENABLE</span><span class="s7">();</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* GPDMA1 interrupt Init */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">HAL_NVIC_SetPriority</span><span class="s7">(</span><span class="s15">GPDMA1_Channel0_IRQn</span><span class="s7">, </span><span class="s14">0</span><span class="s7">, </span><span class="s14">0</span><span class="s7">);</span></p>
+<p class="p12"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s10">HAL_NVIC_EnableIRQ</span><span class="s7">(</span><span class="s1">GPDMA1_Channel0_IRQn</span><span class="s7">);</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">HAL_NVIC_SetPriority</span><span class="s7">(</span><span class="s15">GPDMA1_Channel1_IRQn</span><span class="s7">, </span><span class="s14">0</span><span class="s7">, </span><span class="s14">0</span><span class="s7">);</span></p>
+<p class="p12"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s10">HAL_NVIC_EnableIRQ</span><span class="s7">(</span><span class="s1">GPDMA1_Channel1_IRQn</span><span class="s7">);</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">HAL_NVIC_SetPriority</span><span class="s7">(</span><span class="s15">GPDMA1_Channel2_IRQn</span><span class="s7">, </span><span class="s14">6</span><span class="s7">, </span><span class="s14">0</span><span class="s7">);</span></p>
+<p class="p12"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s10">HAL_NVIC_EnableIRQ</span><span class="s7">(</span><span class="s1">GPDMA1_Channel2_IRQn</span><span class="s7">);</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">HAL_NVIC_SetPriority</span><span class="s7">(</span><span class="s15">GPDMA1_Channel3_IRQn</span><span class="s7">, </span><span class="s14">5</span><span class="s7">, </span><span class="s14">0</span><span class="s7">);</span></p>
+<p class="p12"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s10">HAL_NVIC_EnableIRQ</span><span class="s7">(</span><span class="s1">GPDMA1_Channel3_IRQn</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN GPDMA1_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END GPDMA1_Init 1 */</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN GPDMA1_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END GPDMA1_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> ICACHE Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_ICACHE_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN ICACHE_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END ICACHE_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN ICACHE_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END ICACHE_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Full retention for ICACHE in stop mode</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s10">LL_PWR_SetICacheRAMStopRetention</span><span class="s7">(</span><span class="s1">LL_PWR_ICACHERAM_STOP_FULL_RETENTION</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Enable instruction cache in 1-way (direct mapped cache)</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">LL_ICACHE_SetMode</span><span class="s7">(</span><span class="s2">LL_ICACHE_1WAY</span><span class="s7">);</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">LL_ICACHE_Enable</span><span class="s7">();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN ICACHE_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END ICACHE_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> RAMCFG Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_RAMCFG_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RAMCFG_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RAMCFG_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RAMCFG_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RAMCFG_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Initialize RAMCFG SRAM1</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hramcfg_SRAM1</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RAMCFG_SRAM1</span><span class="s7">;</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RAMCFG_Init</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">hramcfg_SRAM1</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RAMCFG_ConfigWaitState</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">hramcfg_SRAM1</span><span class="s7">, </span><span class="s2">RAMCFG_WAITSTATE_0</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RAMCFG_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RAMCFG_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> RNG Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_RNG_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RNG_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RNG_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RNG_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RNG_Init 1 */</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hrng</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RNG</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hrng</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ClockErrorDetection</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RNG_CED_DISABLE</span><span class="s7">;</span></p>
+<p class="p11"><span class="s12"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s12"> (</span><span class="s17">HAL_RNG_Init</span><span class="s12">(</span><span class="s13">&amp;</span><span class="s8">hrng</span><span class="s12">) </span><span class="s13">!=</span><span class="s12"> </span><span class="s15">HAL_OK</span><span class="s12">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RNG_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* Disable RNG peripheral and its RCC clock */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">HW_RNG_Disable</span><span class="s7">( );</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RNG_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> RTC Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_RTC_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RTC_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RTC_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RTC_PrivilegeStateTypeDef</span><span class="s7"> </span><span class="s8">privilegeState</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> {</span><span class="s14">0</span><span class="s7">};</span></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">RTC_AlarmTypeDef</span><span class="s7"> </span><span class="s8">sAlarm</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> {</span><span class="s14">0</span><span class="s7">};</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RTC_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RTC_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Initialize RTC Only</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hrtc</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RTC</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hrtc</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">AsynchPrediv</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s14">31</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hrtc</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OutPut</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_OUTPUT_DISABLE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hrtc</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OutPutRemap</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_OUTPUT_REMAP_NONE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hrtc</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OutPutPolarity</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_OUTPUT_POLARITY_HIGH</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hrtc</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OutPutType</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_OUTPUT_TYPE_OPENDRAIN</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hrtc</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OutPutPullUp</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_OUTPUT_PULLUP_NONE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hrtc</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">BinMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RTC_BINARY_ONLY</span><span class="s7">;</span></p>
+<p class="p11"><span class="s12"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s12"> (</span><span class="s17">HAL_RTC_Init</span><span class="s12">(</span><span class="s13">&amp;</span><span class="s8">hrtc</span><span class="s12">) </span><span class="s13">!=</span><span class="s12"> </span><span class="s15">HAL_OK</span><span class="s12">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">privilegeState</span><span class="s7">.</span><span class="s1">rtcPrivilegeFull</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RTC_PRIVILEGE_FULL_NO</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">privilegeState</span><span class="s7">.</span><span class="s1">backupRegisterPrivZone</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RTC_PRIVILEGE_BKUP_ZONE_NONE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">privilegeState</span><span class="s7">.</span><span class="s1">backupRegisterStartZone2</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RTC_BKP_DR0</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">privilegeState</span><span class="s7">.</span><span class="s1">backupRegisterStartZone3</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RTC_BKP_DR0</span><span class="s7">;</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RTCEx_PrivilegeModeSet</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">hrtc</span><span class="s7">, </span><span class="s16">&amp;</span><span class="s8">privilegeState</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN Check_RTC_BKUP */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END Check_RTC_BKUP */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Initialize RTC and set the Time and Date</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RTCEx_SetSSRU_IT</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">hrtc</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/** Enable the Alarm A</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">sAlarm</span><span class="s7">.</span><span class="s8">BinaryAutoClr</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_ALARMSUBSECONDBIN_AUTOCLR_NO</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">sAlarm</span><span class="s7">.</span><span class="s1">AlarmTime</span><span class="s7">.</span><span class="s1">SubSeconds</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s14">0x0</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">sAlarm</span><span class="s7">.</span><span class="s8">AlarmMask</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_ALARMMASK_NONE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">sAlarm</span><span class="s7">.</span><span class="s8">AlarmSubSecondMask</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">RTC_ALARMSUBSECONDBINMASK_NONE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">sAlarm</span><span class="s7">.</span><span class="s1">Alarm</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">RTC_ALARM_A</span><span class="s7">;</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_RTC_SetAlarm_IT</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">hrtc</span><span class="s7">, </span><span class="s16">&amp;</span><span class="s8">sAlarm</span><span class="s7">, </span><span class="s2">RTC_FORMAT_BCD</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN RTC_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END RTC_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> SPI2 Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_SPI2_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN SPI2_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END SPI2_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN SPI2_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END SPI2_Init 1 */</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* SPI2 parameter configuration*/</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI2</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">Mode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_MODE_MASTER</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">Direction</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_DIRECTION_2LINES</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">DataSize</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_DATASIZE_8BIT</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">CLKPolarity</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_POLARITY_LOW</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">CLKPhase</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_PHASE_1EDGE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">NSS</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_NSS_SOFT</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">BaudRatePrescaler</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_BAUDRATEPRESCALER_2</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">FirstBit</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_FIRSTBIT_MSB</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">TIMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_TIMODE_DISABLE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">CRCCalculation</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_CRCCALCULATION_DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">CRCPolynomial</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s14">0x7</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">NSSPMode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_NSS_PULSE_ENABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">NSSPolarity</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_NSS_POLARITY_LOW</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">FifoThreshold</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_FIFO_THRESHOLD_01DATA</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">MasterSSIdleness</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_MASTER_SS_IDLENESS_00CYCLE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">MasterInterDataIdleness</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_MASTER_INTERDATA_IDLENESS_00CYCLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">MasterReceiverAutoSusp</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_MASTER_RX_AUTOSUSP_DISABLE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">MasterKeepIOState</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_MASTER_KEEP_IO_STATE_DISABLE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">IOSwap</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_IO_SWAP_DISABLE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">hspi2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">ReadyMasterManagement</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">SPI_RDY_MASTER_MANAGEMENT_INTERNALLY</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">hspi2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ReadyPolarity</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">SPI_RDY_POLARITY_HIGH</span><span class="s7">;</span></p>
+<p class="p11"><span class="s12"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s12"> (</span><span class="s17">HAL_SPI_Init</span><span class="s12">(</span><span class="s13">&amp;</span><span class="s8">hspi2</span><span class="s12">) </span><span class="s13">!=</span><span class="s12"> </span><span class="s15">HAL_OK</span><span class="s12">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN SPI2_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END SPI2_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> USART1 Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_USART1_UART_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN USART1_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END USART1_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN USART1_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END USART1_Init 1 */</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">USART1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">BaudRate</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s14">115200</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">WordLength</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_WORDLENGTH_8B</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">StopBits</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_STOPBITS_1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">Parity</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_PARITY_NONE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">huart1</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">Mode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">UART_MODE_TX_RX</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">HwFlowCtl</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_HWCONTROL_NONE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">OverSampling</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_OVERSAMPLING_8</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">huart1</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OneBitSampling</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">UART_ONE_BIT_SAMPLE_DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ClockPrescaler</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_PRESCALER_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart1</span><span class="s7">.</span><span class="s1">AdvancedInit</span><span class="s7">.</span><span class="s1">AdvFeatureInit</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_ADVFEATURE_NO_INIT</span><span class="s7">;</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UART_Init</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart1</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UARTEx_SetTxFifoThreshold</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart1</span><span class="s7">, </span><span class="s2">UART_TXFIFO_THRESHOLD_1_8</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UARTEx_SetRxFifoThreshold</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart1</span><span class="s7">, </span><span class="s2">UART_RXFIFO_THRESHOLD_1_8</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UARTEx_EnableFifoMode</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart1</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN USART1_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END USART1_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> USART2 Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">MX_USART2_UART_Init</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN USART2_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END USART2_Init 0 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN USART2_Init 1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END USART2_Init 1 */</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">Instance</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">USART2</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">BaudRate</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s14">115200</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">WordLength</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_WORDLENGTH_8B</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">StopBits</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_STOPBITS_1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">Parity</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_PARITY_NONE</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">huart2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">Mode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">UART_MODE_TX_RX</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">huart2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">HwFlowCtl</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">UART_HWCONTROL_RTS_CTS</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">OverSampling</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_OVERSAMPLING_16</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">huart2</span><span class="s7">.</span><span class="s8">Init</span><span class="s7">.</span><span class="s8">OneBitSampling</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">UART_ONE_BIT_SAMPLE_DISABLE</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">Init</span><span class="s7">.</span><span class="s1">ClockPrescaler</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_PRESCALER_DIV1</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">huart2</span><span class="s7">.</span><span class="s1">AdvancedInit</span><span class="s7">.</span><span class="s1">AdvFeatureInit</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">UART_ADVFEATURE_NO_INIT</span><span class="s7">;</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UART_Init</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart2</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UARTEx_SetTxFifoThreshold</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart2</span><span class="s7">, </span><span class="s2">UART_TXFIFO_THRESHOLD_1_8</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UARTEx_SetRxFifoThreshold</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart2</span><span class="s7">, </span><span class="s2">UART_RXFIFO_THRESHOLD_1_8</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s6">if</span><span class="s7"> (</span><span class="s1">HAL_UARTEx_DisableFifoMode</span><span class="s7">(</span><span class="s16">&amp;</span><span class="s8">huart2</span><span class="s7">) </span><span class="s16">!=</span><span class="s7"> </span><span class="s15">HAL_OK</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">    </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN USART2_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END USART2_Init 2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"> GPIO Initialization Function</span></p>
+<p class="p2"><span class="s3"><span class="Apple-converted-space">  </span>* </span><span class="s1">@param</span><span class="s3"> </span><span class="s8">None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s1">static</span><span class="s7"> </span><span class="s1">void</span><span class="s7"> </span><span class="s10">MX_GPIO_Init</span><span class="s7">(</span><span class="s1">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p6"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">GPIO_InitTypeDef</span><span class="s7"> </span><span class="s8">GPIO_InitStruct</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> {</span><span class="s14">0</span><span class="s7">};</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN MX_GPIO_Init_1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END MX_GPIO_Init_1 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* GPIO Ports Clock Enable */</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">__HAL_RCC_GPIOB_CLK_ENABLE</span><span class="s7">();</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">__HAL_RCC_GPIOA_CLK_ENABLE</span><span class="s7">();</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">__HAL_RCC_GPIOC_CLK_ENABLE</span><span class="s7">();</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/*Configure GPIO pin Output Level */</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s10">HAL_GPIO_WritePin</span><span class="s7">(</span><span class="s1">GPIOA</span><span class="s7">, </span><span class="s1">ENABLE_Pin</span><span class="s16">|</span><span class="s1">SPI_SS_Pin</span><span class="s7">, </span><span class="s15">GPIO_PIN_RESET</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/*Configure GPIO pin : INTERRUPT_Pin */</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">GPIO_InitStruct</span><span class="s7">.</span><span class="s1">Pin</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">INTERRUPT_Pin</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">GPIO_InitStruct</span><span class="s7">.</span><span class="s1">Mode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">GPIO_MODE_IT_RISING</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">GPIO_InitStruct</span><span class="s7">.</span><span class="s1">Pull</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">GPIO_PULLDOWN</span><span class="s7">;</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s10">HAL_GPIO_Init</span><span class="s7">(</span><span class="s1">INTERRUPT_GPIO_Port</span><span class="s7">, </span><span class="s16">&amp;</span><span class="s8">GPIO_InitStruct</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/*Configure GPIO pins : ENABLE_Pin SPI_SS_Pin */</span></p>
+<p class="p2"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s8">GPIO_InitStruct</span><span class="s7">.</span><span class="s8">Pin</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s1">ENABLE_Pin</span><span class="s16">|</span><span class="s1">SPI_SS_Pin</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">GPIO_InitStruct</span><span class="s7">.</span><span class="s1">Mode</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">GPIO_MODE_OUTPUT_PP</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">GPIO_InitStruct</span><span class="s7">.</span><span class="s1">Pull</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">GPIO_NOPULL</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">GPIO_InitStruct</span><span class="s7">.</span><span class="s1">Speed</span><span class="s7"> </span><span class="s16">=</span><span class="s7"> </span><span class="s2">GPIO_SPEED_FREQ_HIGH</span><span class="s7">;</span></p>
+<p class="p7"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s10">HAL_GPIO_Init</span><span class="s7">(</span><span class="s2">GPIOA</span><span class="s7">, </span><span class="s16">&amp;</span><span class="s1">GPIO_InitStruct</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* EXTI interrupt init*/</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">HAL_NVIC_SetPriority</span><span class="s7">(</span><span class="s15">EXTI2_IRQn</span><span class="s7">, </span><span class="s14">0</span><span class="s7">, </span><span class="s14">0</span><span class="s7">);</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">HAL_NVIC_EnableIRQ</span><span class="s7">(</span><span class="s15">EXTI2_IRQn</span><span class="s7">);</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN MX_GPIO_Init_2 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END MX_GPIO_Init_2 */</span></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* USER CODE BEGIN 4 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/* USER CODE END 4 */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"><span class="Apple-converted-space">  </span>This function is executed in case of error occurrence.</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p8"><span class="s2">void</span><span class="s7"> </span><span class="s1">Error_Handler</span><span class="s7">(</span><span class="s2">void</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN Error_Handler_Debug */</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* User can add his own implementation to report the HAL error return state */</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">__disable_irq</span><span class="s7">();</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span></span><span class="s6">while</span><span class="s1"> (</span><span class="s14">1</span><span class="s1">)</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>{</span></p>
+<p class="p10"><span class="s1"><span class="Apple-converted-space">  </span>}</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END Error_Handler_Debug */</span></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p2"><span class="s6">#ifdef</span><span class="s1"> USE_FULL_ASSERT</span></p>
+<p class="p1"><span class="s1">/**</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@brief</span><span class="s1"><span class="Apple-converted-space">  </span>Reports the name of the source file and the source line number</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* <span class="Apple-converted-space">        </span>where the assert_param error has occurred.</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@param</span><span class="s1"><span class="Apple-converted-space">  </span></span><span class="s8">file</span><span class="s1">: pointer to the source file name</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@param</span><span class="s1"><span class="Apple-converted-space">  </span></span><span class="s8">line</span><span class="s1">: assert_param error line source number</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>* </span><span class="s2">@retval</span><span class="s1"> None</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>*/</span></p>
+<p class="p2"><span class="s1">void</span><span class="s7"> </span><span class="s10">assert_failed</span><span class="s7">(</span><span class="s1">uint8_t</span><span class="s7"> </span><span class="s16">*</span><span class="s8">file</span><span class="s7">, </span><span class="s1">uint32_t</span><span class="s7"> </span><span class="s8">line</span><span class="s7">)</span></p>
+<p class="p10"><span class="s1">{</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE BEGIN 6 */</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* User can add his own implementation to report the file name and line number,</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">     </span>ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */</span></p>
+<p class="p5"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s10">printf</span><span class="s7">(</span><span class="s1">"Critical Error: File </span><span class="s8">%s</span><span class="s1"> on line </span><span class="s8">%d</span><span class="s18">\r\n</span><span class="s1">"</span><span class="s7">, file, line);</span></p>
+<p class="p8"><span class="s7"><span class="Apple-converted-space">  </span></span><span class="s1">Error_Handler</span><span class="s7">();</span></p>
+<p class="p1"><span class="s1"><span class="Apple-converted-space">  </span>/* USER CODE END 6 */</span></p>
+<p class="p10"><span class="s1">}</span></p>
+<p class="p1"><span class="s6">#endif</span><span class="s1"> /* USE_FULL_ASSERT */</span></p>
+<p class="p4"><span class="s5"></span><br></p>
+</body>
+</html>
