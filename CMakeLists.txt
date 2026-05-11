@@ -47,6 +47,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/algorithms/acc_algorithm.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_bring_up.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
