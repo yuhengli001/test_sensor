@@ -33,6 +33,7 @@
 /* USER CODE BEGIN Includes */
 #include "stm32_seq.h"   /* For UTIL_SEQ_SetTask */
 #include "vibration_service_app.h"
+#include "radar_adapter.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -128,12 +129,14 @@ void CONTROL_SERVICE_Notification(CONTROL_SERVICE_NotificationEvt_t *p_Notificat
           {
               is_radar_running = 1;
               LOG_INFO_APP("Received START command. Starting Radar Task...\r\n");
+              Radar_Adapter_Start((Radar_Mode_t)current_radar_mode);
               UTIL_SEQ_SetTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, CFG_SEQ_PRIO_0); /* Triggers the radar task */
           }
           else if (cmd == 0x00) /* STOP command */
           {
               is_radar_running = 0;
               LOG_INFO_APP("Received STOP command. Stopping Radar...\r\n");
+              Radar_Adapter_Stop();
           }
       }
 
@@ -213,6 +216,7 @@ void CONTROL_SERVICE_APP_Init(void)
   CONTROL_SERVICE_Init();
 
   /* USER CODE BEGIN Service1_APP_Init */
+  Radar_Adapter_Init();
   UTIL_SEQ_RegTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, UTIL_SEQ_RFU, Radar_Process_Task); /* Register the task */
   /* USER CODE END Service1_APP_Init */
   return;
@@ -255,20 +259,12 @@ __USED void CONTROL_SERVICE_Sensor_status_SendNotification(void) /* Property Not
 static void Radar_Process_Task(void) {
   if (is_radar_running == 0) return; 
   
-  if (current_radar_mode == 3) /* Vibration Mode */
-  {
-      /* Mock data at ~10Hz */
-      static float mock_freq = 10.0f;
-      VIBRATION_APP_UpdateData(mock_freq, 50.5f, 1.2f, 0.5f);
-      
-      mock_freq += 0.1f;
-      if (mock_freq > 100.0f) mock_freq = 10.0f;
-  }
+  /* Call the adapter to process math and trigger BLE updates */
+  Radar_Adapter_Process((Radar_Mode_t)current_radar_mode);
   
-  /* Throttle the loop so we don't saturate the BLE buffer (fixes error 0x64) */
-  HAL_Delay(100); 
-  
-  /* Keep the loop running */
-  UTIL_SEQ_SetTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, CFG_SEQ_PRIO_0);
+  /* Do NOT use HAL_Delay or UTIL_SEQ_SetTask here! 
+   * The Radar_Update_Timer in app_ble.c will automatically trigger this task 
+   * again in 100ms. This leaves the CPU free to process BLE commands instantly.
+   */
 }
 /* USER CODE END FD_LOCAL_FUNCTIONS */

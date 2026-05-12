@@ -16,6 +16,10 @@
 
 #include "main.h"
 
+/* WPAN Includes for Sequencer */
+#include "app_conf.h"
+#include "stm32_seq.h"
+
 /* spi handle */
 extern SPI_HandleTypeDef A121_SPI_HANDLE;
 
@@ -162,7 +166,9 @@ bool acc_hal_integration_wait_for_sensor_interrupt(acc_sensor_id_t sensor_id, ui
 		// Check again so that IRQ did not occur
 		if (HAL_GPIO_ReadPin(int_port, int_pin_mask) != GPIO_PIN_SET)
 		{
-			__WFI();
+			// Instead of fully sleeping with __WFI(), process BLE events!
+            // This prevents the BLE STOP command from being blocked while waiting for the radar.
+			UTIL_SEQ_Run(1 << CFG_TASK_HCI_ASYNCH_EVT_ID);
 		}
 
 		// Enable interrupts again to allow pending interrupt to be handled

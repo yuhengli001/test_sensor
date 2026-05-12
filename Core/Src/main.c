@@ -482,7 +482,6 @@ void MX_RNG_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN RNG_Init 2 */
-
   /* Disable RNG peripheral and its RCC clock */
   HW_RNG_Disable( );
   /* USER CODE END RNG_Init 2 */
