@@ -9,9 +9,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <complex.h>
 
 #include "acc_definitions_a121.h"
-#include "acc_detector_distance.h"
+#include "acc_detector_presence.h"
 #include "acc_hal_definitions_a121.h"
 #include "acc_hal_integration_a121.h"
 #include "acc_integration.h"
@@ -24,73 +25,40 @@
 #include "fall_detector.h"
 #include "vital_signs.h"
 
-#define PI 3.14159265358979323846f
-
-typedef enum {
-  DISTANCE_PRESET_CONFIG_NONE = 0,
-  DISTANCE_PRESET_CONFIG_BALANCED,
-  DISTANCE_PRESET_CONFIG_HIGH_ACCURACY,
-} distance_preset_config_t;
+#ifndef M_PI
+#define M_PI 3.14159265358979323846f
+#endif
 
 #define SENSOR_ID (1U)
-// 2 seconds should be enough even for long ranges and high signal quality
 #define SENSOR_TIMEOUT_MS (2000U)
 
-typedef struct {
-  acc_sensor_t *sensor;
-  acc_detector_distance_config_t *config;
-  acc_detector_distance_handle_t *handle;
-  void *buffer;
-  uint32_t buffer_size;
-  uint8_t *detector_cal_result_static;
-  uint32_t detector_cal_result_static_size;
-  acc_detector_cal_result_dynamic_t detector_cal_result_dynamic;
-} distance_detector_resources_t;
+static bool do_sensor_calibration(acc_sensor_t *sensor, acc_cal_result_t *cal_result, void *buffer, uint32_t buffer_size);
 
-static void cleanup(distance_detector_resources_t *resources);
+static void cleanup(acc_detector_presence_handle_t *presence_handle,
+                    acc_detector_presence_config_t *presence_config,
+                    acc_sensor_t                   *sensor,
+                    void                           *buffer);
 
-static void set_config(acc_detector_distance_config_t *detector_config,
-                       distance_preset_config_t preset);
+// 相位追踪相关的静态变量
+static float prev_angle = 0.0f;
+static float unwrapped_angle = 0.0f;
+static bool first_phase = true;
+static float previous_presence_dist = 0.0f;
+static bool has_previous_presence = false;
+static uint32_t missing_target_count = 0;
 
-static bool
-initialize_detector_resources(distance_detector_resources_t *resources);
-
-static bool do_sensor_calibration(acc_sensor_t *sensor,
-                                  acc_cal_result_t *sensor_cal_result,
-                                  void *buffer, uint32_t buffer_size);
-
-static bool
-do_full_detector_calibration(distance_detector_resources_t *resources,
-                             const acc_cal_result_t *sensor_cal_result);
-
-static bool
-do_detector_calibration_update(distance_detector_resources_t *resources,
-                               const acc_cal_result_t *sensor_cal_result);
-
-static bool do_detector_get_next(distance_detector_resources_t *resources,
-                                 const acc_cal_result_t *sensor_cal_result,
-                                 acc_detector_distance_result_t *result);
-
-static float previous_distance = 0.0f;
-static bool has_previous_distance = false;
-
-static void print_distance_result(const acc_detector_distance_result_t *result) {
-  if (result->num_distances == 0) {
-    printf("No distance detected\n");
-    has_previous_distance = false;
-    return;
-  }
-
-  float current_dist = result->distances[0];
-  printf("Distance: %.3f m (strength: %.1f dB)\n",
-         (double)current_dist,
-         (double)result->strengths[0]);
-}
+static float last_known_dist = 0.0f;
+static float ema_dist = 0.0f;
 
 int acc_example_detector_distance(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-  distance_detector_resources_t resources = {0};
+  acc_detector_presence_config_t  *presence_config = NULL;
+  acc_detector_presence_handle_t  *presence_handle = NULL;
+  acc_detector_presence_metadata_t metadata;
+  acc_sensor_t                    *sensor      = NULL;
+  void                            *buffer      = NULL;
+  uint32_t                         buffer_size = 0U;
 
   printf("Acconeer software version %s\n", acc_version_get());
 
@@ -100,201 +68,248 @@ int acc_example_detector_distance(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  resources.config = acc_detector_distance_config_create();
-  if (resources.config == NULL) {
-    printf("acc_detector_distance_config_create() failed\n");
-    cleanup(&resources);
+  presence_config = acc_detector_presence_config_create();
+  if (presence_config == NULL) {
+    printf("acc_detector_presence_config_create() failed\n");
+    cleanup(presence_handle, presence_config, sensor, buffer);
     return EXIT_FAILURE;
   }
 
-  set_config(resources.config, DISTANCE_PRESET_CONFIG_HIGH_ACCURACY);
+  // 配置存在感探测器 (专门针对呼吸和微弱移动优化)
+  acc_detector_presence_config_start_set(presence_config, 0.3f);
+  acc_detector_presence_config_end_set(presence_config, 2.5f);
+  acc_detector_presence_config_automatic_subsweeps_set(presence_config, true);
+  acc_detector_presence_config_signal_quality_set(presence_config, 20.0f);
+  acc_detector_presence_config_sweeps_per_frame_set(presence_config, 16);
+  acc_detector_presence_config_frame_rate_set(presence_config, SAMPLE_RATE_HZ);
+  acc_detector_presence_config_frame_rate_app_driven_set(presence_config, false);
+  acc_detector_presence_config_reset_filters_on_prepare_set(presence_config, true);
+  acc_detector_presence_config_intra_detection_set(presence_config, true);
+  acc_detector_presence_config_intra_detection_threshold_set(presence_config, 1.3f);
+  acc_detector_presence_config_inter_detection_set(presence_config, true);
+  acc_detector_presence_config_inter_detection_threshold_set(presence_config, 1.0f);
 
-  if (!initialize_detector_resources(&resources)) {
-    printf("Initializing detector resources failed\n");
-    cleanup(&resources);
+  presence_handle = acc_detector_presence_create(presence_config, &metadata);
+  if (presence_handle == NULL) {
+    printf("acc_detector_presence_create() failed\n");
+    cleanup(presence_handle, presence_config, sensor, buffer);
     return EXIT_FAILURE;
   }
 
-  // Print the configuration
-  acc_detector_distance_config_log(resources.handle, resources.config);
+  if (!acc_detector_presence_get_buffer_size(presence_handle, &buffer_size)) {
+    printf("acc_detector_presence_get_buffer_size() failed\n");
+    cleanup(presence_handle, presence_config, sensor, buffer);
+    return EXIT_FAILURE;
+  }
 
-  /* Turn the sensor on */
+  buffer = acc_integration_mem_alloc(buffer_size);
+  if (buffer == NULL) {
+    printf("buffer allocation failed\n");
+    cleanup(presence_handle, presence_config, sensor, buffer);
+    return EXIT_FAILURE;
+  }
+
   acc_hal_integration_sensor_supply_on(SENSOR_ID);
   acc_hal_integration_sensor_enable(SENSOR_ID);
 
-  resources.sensor = acc_sensor_create(SENSOR_ID);
-  if (resources.sensor == NULL) {
+  sensor = acc_sensor_create(SENSOR_ID);
+  if (sensor == NULL) {
     printf("acc_sensor_create() failed\n");
-    cleanup(&resources);
+    cleanup(presence_handle, presence_config, sensor, buffer);
     return EXIT_FAILURE;
   }
 
-  acc_cal_result_t sensor_cal_result;
+  acc_cal_result_t cal_result;
 
-  if (!do_sensor_calibration(resources.sensor, &sensor_cal_result,
-                             resources.buffer, resources.buffer_size)) {
-    printf("Sensor calibration failed\n");
-    cleanup(&resources);
+  if (!do_sensor_calibration(sensor, &cal_result, buffer, buffer_size)) {
+    printf("do_sensor_calibration() failed\n");
+    cleanup(presence_handle, presence_config, sensor, buffer);
     return EXIT_FAILURE;
   }
 
-  if (!do_full_detector_calibration(&resources, &sensor_cal_result)) {
-    printf("Detector calibration failed\n");
-    cleanup(&resources);
+  if (!acc_detector_presence_prepare(presence_handle, presence_config, sensor, &cal_result, buffer, buffer_size)) {
+    printf("acc_detector_presence_prepare() failed\n");
+    cleanup(presence_handle, presence_config, sensor, buffer);
     return EXIT_FAILURE;
   }
 
-  // 初始化各个功能模块
-  previous_distance = 0.0f;
-  has_previous_distance = false;
+  // 初始化子模块
   fall_detector_init();
   vital_signs_init();
+  first_phase = true;
+  unwrapped_angle = 0.0f;
+  has_previous_presence = false;
+  missing_target_count = 0;
 
-  acc_integration_set_periodic_wakeup(50); // 50 ms = 20 Hz update rate
+  printf("Entering main loop with Presence Detector (Phase Mode)...\n");
 
   while (true) {
-    acc_detector_distance_result_t result = {0};
+    acc_detector_presence_result_t result;
 
-    if (!do_detector_get_next(&resources, &sensor_cal_result, &result)) {
-      printf("Could not get next result\n");
-      cleanup(&resources);
+    if (!acc_sensor_measure(sensor)) {
+      printf("acc_sensor_measure failed\n");
+      cleanup(presence_handle, presence_config, sensor, buffer);
       return EXIT_FAILURE;
     }
 
-    /* If "calibration needed" is indicated, the sensor needs to be recalibrated
-     * and the detector calibration updated */
-    if (result.calibration_needed) {
-      printf(
-          "Sensor recalibration and detector calibration update needed ... \n");
-
-      if (!do_sensor_calibration(resources.sensor, &sensor_cal_result,
-                                 resources.buffer, resources.buffer_size)) {
-        printf("Sensor calibration failed\n");
-        cleanup(&resources);
-        return EXIT_FAILURE;
-      }
-
-      /* Once the sensor is recalibrated, the detector calibration should be
-       * updated and measuring can continue. */
-      if (!do_detector_calibration_update(&resources, &sensor_cal_result)) {
-        printf("Detector calibration update failed\n");
-        cleanup(&resources);
-        return EXIT_FAILURE;
-      }
-
-      printf("Sensor recalibration and detector calibration update done!\n");
-    } else {
-      print_distance_result(&result);
+    if (!acc_hal_integration_wait_for_sensor_interrupt(SENSOR_ID, SENSOR_TIMEOUT_MS)) {
+      printf("Sensor interrupt timeout\n");
+      cleanup(presence_handle, presence_config, sensor, buffer);
+      return EXIT_FAILURE;
     }
 
-    acc_integration_sleep_until_periodic_wakeup();
+    if (!acc_sensor_read(sensor, buffer, buffer_size)) {
+      printf("acc_sensor_read failed\n");
+      cleanup(presence_handle, presence_config, sensor, buffer);
+      return EXIT_FAILURE;
+    }
+
+    if (!acc_detector_presence_process(presence_handle, buffer, &result)) {
+      printf("acc_detector_presence_process failed\n");
+      cleanup(presence_handle, presence_config, sensor, buffer);
+      return EXIT_FAILURE;
+    }
+
+    // 检查是否需要重新校准
+    if (result.processing_result.calibration_needed) {
+      printf("Sensor recalibration needed ... \n");
+      if (!do_sensor_calibration(sensor, &cal_result, buffer, buffer_size)) {
+        printf("do_sensor_calibration() failed\n");
+        cleanup(presence_handle, presence_config, sensor, buffer);
+        return EXIT_FAILURE;
+      }
+      if (!acc_detector_presence_prepare(presence_handle, presence_config, sensor, &cal_result, buffer, buffer_size)) {
+        printf("acc_detector_presence_prepare() failed\n");
+        cleanup(presence_handle, presence_config, sensor, buffer);
+        return EXIT_FAILURE;
+      }
+      continue; // 跳过这一帧的处理
+    }
+
+    // 核心处理逻辑：存在感检测 + IQ 相位提取
+    if (result.presence_detected) {
+      last_known_dist = result.presence_distance;
+      missing_target_count = 0;
+    } else {
+      missing_target_count++;
+    }
+
+    // 只要目标没有丢失超过 2 秒，就强制持续提取相位 (解决没输出的问题)
+    if (last_known_dist > 0.1f && missing_target_count < (uint32_t)(SAMPLE_RATE_HZ * 2.0f)) {
+      float current_dist = last_known_dist;
+      
+      // 1. 处理跌倒检测逻辑 (引入 EMA 滤波，解决6m/s的误报跳变)
+      if (!has_previous_presence) {
+        ema_dist = current_dist;
+        previous_presence_dist = current_dist;
+        has_previous_presence = true;
+      } else {
+        // 使用 EMA (指数移动平均) 平滑距离跳变，alpha = 0.15
+        ema_dist = 0.15f * current_dist + 0.85f * ema_dist;
+        
+        float dist_diff = ema_dist - previous_presence_dist;
+        float velocity = dist_diff * SAMPLE_RATE_HZ;
+        process_fall_detection(velocity, dist_diff, ema_dist);
+        previous_presence_dist = ema_dist;
+      }
+
+      // 2. 提取 IQ 相位用于呼吸心率检测
+      // 由于开启了 automatic_subsweeps, step_length_m 可能无效。
+      // 我们直接通过寻找 inter_presence_scores 的最高点来确定目标在数组中的 index
+      int index = 0;
+      float max_score = 0.0f;
+      for (uint32_t i = 0; i < result.depthwise_presence_scores_length; i++) {
+          if (result.depthwise_inter_presence_scores[i] > max_score) {
+              max_score = result.depthwise_inter_presence_scores[i];
+              index = (int)i;
+          }
+      }
+      
+      if (index >= 0 && index < metadata.num_points) {
+        float complex mean_sweep = 0.0f + 0.0f * I;
+        
+        uint16_t sweeps_per_frame = acc_detector_presence_config_sweeps_per_frame_get(presence_config);
+        
+        // 计算这一帧所有 sweeps 的平均 IQ 向量 (降低随机噪声)
+        for (int s = 0; s < sweeps_per_frame; s++) {
+            acc_int16_complex_t point = result.processing_result.frame[s * metadata.num_points + index];
+            mean_sweep += (float)point.real + (float)point.imag * I;
+        }
+        mean_sweep /= sweeps_per_frame;
+
+        // 计算夹角 (相位)
+        float angle = cargf(mean_sweep);
+
+        // 相位解包裹 (Unwrapping)
+        if (first_phase) {
+            prev_angle = angle;
+            unwrapped_angle = angle;
+            first_phase = false;
+        } else {
+            float angle_diff = angle - prev_angle;
+            
+            // 处理跨越 2*PI 的跳变
+            if (angle_diff > M_PI) {
+                angle_diff -= 2.0f * M_PI;
+            } else if (angle_diff < -M_PI) {
+                angle_diff += 2.0f * M_PI;
+            }
+            
+            unwrapped_angle += angle_diff;
+            prev_angle = angle;
+        }
+
+        // 将解包裹后的相位传入维生体征模块
+        process_vital_signs(unwrapped_angle, current_dist);
+      }
+    } else if (missing_target_count >= (uint32_t)(SAMPLE_RATE_HZ * 2.0f)) {
+      // 真正目标丢失 (超过2秒)
+      if (has_previous_presence) {
+          printf("[System] Target lost.\n");
+      } else if (missing_target_count % (uint32_t)(SAMPLE_RATE_HZ * 2.0f) == 0) {
+          // 每两秒打印一次扫描状态，防止完全没输出让用户误以为死机
+          printf("[System] Scanning for target... (Scores: intra=%.2f, inter=%.2f)\n", 
+                 result.intra_presence_score, result.inter_presence_score);
+      }
+      has_previous_presence = false;
+      first_phase = true;
+      last_known_dist = 0.0f;
+    }
   }
 
-  acc_integration_set_periodic_wakeup(0);
-  cleanup(&resources);
-
-  printf("Done!\n");
-
+  cleanup(presence_handle, presence_config, sensor, buffer);
   return EXIT_SUCCESS;
 }
 
-static void cleanup(distance_detector_resources_t *resources) {
+static void cleanup(acc_detector_presence_handle_t *presence_handle,
+                    acc_detector_presence_config_t *presence_config,
+                    acc_sensor_t                   *sensor,
+                    void                           *buffer)
+{
   acc_hal_integration_sensor_disable(SENSOR_ID);
   acc_hal_integration_sensor_supply_off(SENSOR_ID);
 
-  acc_detector_distance_config_destroy(resources->config);
-  acc_detector_distance_destroy(resources->handle);
+  if (presence_config != NULL) {
+    acc_detector_presence_config_destroy(presence_config);
+  }
 
-  acc_integration_mem_free(resources->buffer);
-  acc_integration_mem_free(resources->detector_cal_result_static);
+  if (presence_handle != NULL) {
+    acc_detector_presence_destroy(presence_handle);
+  }
 
-  if (resources->sensor != NULL) {
-    acc_sensor_destroy(resources->sensor);
+  if (sensor != NULL) {
+    acc_sensor_destroy(sensor);
+  }
+
+  if (buffer != NULL) {
+    acc_integration_mem_free(buffer);
   }
 }
 
-static void set_config(acc_detector_distance_config_t *detector_config,
-                       distance_preset_config_t preset) {
-  switch (preset) {
-  case DISTANCE_PRESET_CONFIG_NONE:
-    break;
-
-  case DISTANCE_PRESET_CONFIG_BALANCED:
-    acc_detector_distance_config_start_set(detector_config, 0.2f);
-    acc_detector_distance_config_end_set(detector_config, 1.0f);
-    acc_detector_distance_config_max_step_length_set(detector_config, 0U);
-    acc_detector_distance_config_max_profile_set(detector_config,
-                                                 ACC_CONFIG_PROFILE_5);
-    acc_detector_distance_config_reflector_shape_set(
-        detector_config, ACC_DETECTOR_DISTANCE_REFLECTOR_SHAPE_GENERIC);
-    acc_detector_distance_config_peak_sorting_set(
-        detector_config, ACC_DETECTOR_DISTANCE_PEAK_SORTING_STRONGEST);
-    acc_detector_distance_config_threshold_method_set(
-        detector_config, ACC_DETECTOR_DISTANCE_THRESHOLD_METHOD_CFAR);
-    acc_detector_distance_config_threshold_sensitivity_set(detector_config,
-                                                           0.5f);
-    acc_detector_distance_config_signal_quality_set(detector_config, 15.0f);
-    acc_detector_distance_config_close_range_leakage_cancellation_set(
-        detector_config, false);
-    break;
-
-  case DISTANCE_PRESET_CONFIG_HIGH_ACCURACY:
-    acc_detector_distance_config_start_set(detector_config, 0.06f);
-    acc_detector_distance_config_end_set(detector_config, 2.0f);
-    acc_detector_distance_config_max_step_length_set(detector_config, 0U);
-    acc_detector_distance_config_max_profile_set(detector_config,
-                                                 ACC_CONFIG_PROFILE_2);
-    acc_detector_distance_config_reflector_shape_set(
-        detector_config, ACC_DETECTOR_DISTANCE_REFLECTOR_SHAPE_GENERIC);
-    acc_detector_distance_config_peak_sorting_set(
-        detector_config, ACC_DETECTOR_DISTANCE_PEAK_SORTING_STRONGEST);
-    acc_detector_distance_config_threshold_method_set(
-        detector_config, ACC_DETECTOR_DISTANCE_THRESHOLD_METHOD_CFAR);
-    acc_detector_distance_config_threshold_sensitivity_set(detector_config,
-                                                           0.4f);
-    acc_detector_distance_config_signal_quality_set(detector_config, 25.0f);
-    acc_detector_distance_config_close_range_leakage_cancellation_set(
-        detector_config, true);
-    break;
-  }
-}
-
-static bool
-initialize_detector_resources(distance_detector_resources_t *resources) {
-  resources->handle = acc_detector_distance_create(resources->config);
-  if (resources->handle == NULL) {
-    printf("acc_detector_distance_create() failed\n");
-    return false;
-  }
-
-  if (!acc_detector_distance_get_sizes(
-          resources->handle, &(resources->buffer_size),
-          &(resources->detector_cal_result_static_size))) {
-    printf("acc_detector_distance_get_sizes() failed\n");
-    return false;
-  }
-
-  resources->buffer = acc_integration_mem_alloc(resources->buffer_size);
-  if (resources->buffer == NULL) {
-    printf("sensor buffer allocation failed\n");
-    return false;
-  }
-
-  resources->detector_cal_result_static =
-      acc_integration_mem_alloc(resources->detector_cal_result_static_size);
-  if (resources->detector_cal_result_static == NULL) {
-    printf("calibration buffer allocation failed\n");
-    return false;
-  }
-
-  return true;
-}
-
-static bool do_sensor_calibration(acc_sensor_t *sensor,
-                                  acc_cal_result_t *sensor_cal_result,
-                                  void *buffer, uint32_t buffer_size) {
-  bool status = false;
-  bool cal_complete = false;
+static bool do_sensor_calibration(acc_sensor_t *sensor, acc_cal_result_t *cal_result, void *buffer, uint32_t buffer_size)
+{
+  bool           status              = false;
+  bool           cal_complete        = false;
   const uint16_t calibration_retries = 1U;
 
   for (uint16_t i = 0; !status && (i <= calibration_retries); i++) {
@@ -302,12 +317,9 @@ static bool do_sensor_calibration(acc_sensor_t *sensor,
     acc_hal_integration_sensor_enable(SENSOR_ID);
 
     do {
-      status = acc_sensor_calibrate(sensor, &cal_complete, sensor_cal_result,
-                                    buffer, buffer_size);
-
+      status = acc_sensor_calibrate(sensor, &cal_complete, cal_result, buffer, buffer_size);
       if (status && !cal_complete) {
-        status = acc_hal_integration_wait_for_sensor_interrupt(
-            SENSOR_ID, SENSOR_TIMEOUT_MS);
+        status = acc_hal_integration_wait_for_sensor_interrupt(SENSOR_ID, SENSOR_TIMEOUT_MS);
       }
     } while (status && !cal_complete);
   }
@@ -318,98 +330,4 @@ static bool do_sensor_calibration(acc_sensor_t *sensor,
   }
 
   return status;
-}
-
-static bool
-do_full_detector_calibration(distance_detector_resources_t *resources,
-                             const acc_cal_result_t *sensor_cal_result) {
-  bool done = false;
-  bool status;
-
-  do {
-    status = acc_detector_distance_calibrate(
-        resources->sensor, resources->handle, sensor_cal_result,
-        resources->buffer, resources->buffer_size,
-        resources->detector_cal_result_static,
-        resources->detector_cal_result_static_size,
-        &resources->detector_cal_result_dynamic, &done);
-
-    if (status && !done) {
-      status = acc_hal_integration_wait_for_sensor_interrupt(SENSOR_ID,
-                                                             SENSOR_TIMEOUT_MS);
-    }
-  } while (status && !done);
-
-  return status;
-}
-
-static bool
-do_detector_calibration_update(distance_detector_resources_t *resources,
-                               const acc_cal_result_t *sensor_cal_result) {
-  bool done = false;
-  bool status;
-
-  do {
-    status = acc_detector_distance_update_calibration(
-        resources->sensor, resources->handle, sensor_cal_result,
-        resources->buffer, resources->buffer_size,
-        &resources->detector_cal_result_dynamic, &done);
-
-    if (status && !done) {
-      status = acc_hal_integration_wait_for_sensor_interrupt(SENSOR_ID,
-                                                             SENSOR_TIMEOUT_MS);
-    }
-  } while (status && !done);
-
-  return status;
-}
-
-static bool do_detector_get_next(distance_detector_resources_t *resources,
-                                 const acc_cal_result_t *sensor_cal_result,
-                                 acc_detector_distance_result_t *result) {
-  bool result_available = false;
-
-  do {
-    if (!acc_detector_distance_prepare(
-            resources->handle, resources->config, resources->sensor,
-            sensor_cal_result, resources->buffer, resources->buffer_size)) {
-      printf("acc_detector_distance_prepare() failed\n");
-      return false;
-    }
-
-    if (!acc_sensor_measure(resources->sensor)) {
-      printf("acc_sensor_measure() failed\n");
-      return false;
-    }
-
-    if (!acc_hal_integration_wait_for_sensor_interrupt(SENSOR_ID,
-                                                       SENSOR_TIMEOUT_MS)) {
-      printf("Sensor interrupt timeout\n");
-      return false;
-    }
-
-    if (!acc_sensor_read(resources->sensor, resources->buffer,
-                         resources->buffer_size)) {
-      printf("acc_sensor_read() failed\n");
-      return false;
-    }
-
-    if (!acc_detector_distance_process(resources->handle, resources->buffer,
-                                       resources->detector_cal_result_static,
-                                       &resources->detector_cal_result_dynamic,
-                                       &result_available, result)) {
-      printf("acc_detector_distance_process() failed\n");
-      return false;
-    }
-  } while (!result_available);
-  // 调度各子模块
-  if (result->num_distances > 0) {
-    float current_dist        = result->distances[0];
-    float diff                = has_previous_distance ? (current_dist - previous_distance) : 0.0f;
-    previous_distance         = current_dist;
-    has_previous_distance = true;
-    process_vital_signs(diff, current_dist);
-  }
-
-  return true;
 }

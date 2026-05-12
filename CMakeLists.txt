@@ -108,7 +108,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     # Add user defined libraries
     # === A121 lib ===
     acc_detector_distance_a121
-    # acc_detector_presence_a121
+    acc_detector_presence_a121
     # acconeer_exploration_server_a121
     # The core library MUST be last
     acconeer_a121

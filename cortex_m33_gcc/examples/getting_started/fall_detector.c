@@ -5,7 +5,7 @@
 #include "acc_integration_log.h"
 
 app_config_t global_config = {
-    .fall_vel_threshold = 1.6f,
+    .fall_vel_threshold = 1.5f,
     .still_threshold = 0.02f,
     .confirm_period_sec = 10,
     .enable_fall_detection = true,
