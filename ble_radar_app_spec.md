@@ -36,13 +36,14 @@ This is the data your STM32 will calculate and send over BLE to the app.
 *   **Activity Level:** (Optional) Continuous motion score, depending on the algorithm implementation.
 
 ### Vibration Mode
-*   **Max Sweep Amplitude:** The maximum amplitude measured in the current radar sweep.
-*   **Time Series Standard Deviation:** (`time_series_std`) A measure of the overall vibration noise/energy.
-*   **Dominant Peak Frequency:** (`peak_frequencies[0]`) The primary frequency of the vibration in Hz.
-*   **Dominant Peak Displacement:** (`peak_displacements[0]`) The magnitude of the vibration at the dominant frequency.
-*   **Peak Count:** Total number of distinct frequency peaks detected.
-*   **Vibration Spectrum Array:** The full array of frequency displacement bins needed to plot the continuous spectrum chart.
-*   **Vibration Alert:** (App-side logic) Triggered if displacement or standard deviation exceeds a threshold.
+*   **Vibration Metrics Table:** A collection of values for the detected vibration peaks:
+    *   **Frequency (Hz):** The frequency of the vibration peak.
+    *   **Displacement (μm):** The displacement magnitude at that frequency.
+    *   **Velocity (mm/s):** Calculated velocity of the vibration.
+    *   **Acceleration (m/s²):** Calculated acceleration of the vibration.
+*   **Freq vs Displacement Data:** The full spectrum array (FFT result) used to plot the Frequency vs. Displacement graph.
+*   **Max Sweep Amplitude:** The raw amplitude measured.
+*   **Vibration Alert:** Triggered if displacement or acceleration exceeds a threshold.
 
 ---
 
@@ -56,8 +57,13 @@ These are the instructions the user can send from the app to configure the senso
 ### Mode-Specific Configuration (App to Sensor)
 
 #### Mode 1: Vital Sign (Distance Detector) Parameters
-*   `start_m` (float): Start distance in meters (default 0.25).
-*   `end_m` (float): End distance in meters (default 3.0).
+
+**Basic Settings (Main UI):**
+*   `start_m` (float): Monitoring start distance in meters (default 0.25).
+*   `end_m` (float): Monitoring end distance in meters (default 3.0).
+*   `threshold_sensitivity` (float): Overall detection sensitivity (default 0.5).
+
+**Advanced Settings (Hidden/Gear Menu):**
 *   `max_step_length` (uint16_t): Maximum step length (default 0).
 *   `max_profile` (enum): Max profile (default profile_5).
 *   `signal_quality` (float): Signal quality threshold (default 15.0).
@@ -67,29 +73,33 @@ These are the instructions the user can send from the app to configure the senso
 *   `num_frames_in_recorded_threshold` (uint16_t): Frames in recorded threshold (default 100).
 *   `fixed_amplitude_threshold_value` (float): Fixed amplitude threshold (default 100.0).
 *   `fixed_strength_threshold_value` (float): Fixed strength threshold (default 0.0).
-*   `threshold_sensitivity` (float): Threshold sensitivity (default 0.5).
 *   `close_range_leakage_cancellation` (bool): Enable close range leakage cancellation (default false).
 
 #### Mode 2: Fall Detection Parameters
 *(To be determined later)*
 
 #### Mode 3: Vibration Parameters
-*   `measured_point` (int32_t): The specific point in the radar distance profile to measure.
-*   `time_series_length` (uint16_t): Length of the time series for FFT calculation.
-*   `lp_coeff` (float): Filter coefficient of exponential filter.
-*   `threshold_sensitivity` (float): Sensitivity of the peak detection threshold.
-*   `amplitude_threshold` (float): Minimum amplitude required to calculate vibration.
-*   `reported_displacement_mode` (enum): Amplitude (0) or Peak-to-Peak (1).
-*   `low_frequency_enhancement` (bool): Adds a loopback subsweep for phase correction.
-*   `profile` (enum): Radar profile (e.g., profile_1 to profile_5).
-*   `frame_rate` (float): Frame rate in Hz.
-*   `sweep_rate` (float): Sweep rate in Hz.
-*   `sweeps_per_frame` (uint16_t): Number of sweeps per frame.
-*   `hwaas` (uint16_t): Hardware average over sweeps (HWAAS).
-*   `double_buffering` (bool): Enable double buffering.
-*   `continuous_sweep_mode` (bool): Enable continuous sweep mode.
-*   `inter_frame_idle_state` (enum): Idle state between frames.
-*   `inter_sweep_idle_state` (enum): Idle state between sweeps.
+
+**Basic Settings (Main UI):**
+*   `measured_point` (int): The distance point index to monitor (default 80).
+*   `amplitude_threshold` (int): Minimum signal strength to calculate vibration (default 100).
+*   `threshold_margin_um` (float): Sensitivity margin in μm for peak detection (default 10.0).
+*   `displacement_mode` (enum): Choose between "Amplitude" or "Peak-to-Peak".
+
+**Advanced Settings (Hidden/Gear Menu):**
+*   `profile` (int): Radar profile 1-5 (default 3).
+*   `frame_rate_hz` (float): Frame rate in Hz (default 10.0).
+*   `frame_rate_limit` (bool): Enable frame rate limit (default False).
+*   `sweep_rate_hz` (float): Sweep rate in Hz (default 3000.0).
+*   `sweeps_per_frame` (int): Number of sweeps per frame (default 128).
+*   `hwaas` (int): Hardware averaging (default 16).
+*   `double_buffering` (bool): Enable double buffering (default True).
+*   `continuous_sweep_mode` (bool): Enable continuous sweep mode (default True).
+*   `inter_frame_idle_state` (enum): Idle state between frames (Ready, Sleep, Deep Sleep).
+*   `inter_sweep_idle_state` (enum): Idle state between sweeps (Ready, Sleep, Deep Sleep).
+*   `time_series_length` (int): FFT calculation length (default 1024).
+*   `time_filtering_coefficient` (float): Exponential filter coefficient (default 0.95).
+*   `low_frequency_enhancement` (bool): Enable low frequency enhancement (default True).
 
 ---
 
@@ -100,7 +110,10 @@ How the app will look and behave for the user.
 *   **Real-time Visuals:**
     *   *Vital:* A calming, pulsating lungs animation with live graphs (no heart rate).
     *   *Fall:* A clear "Room Status" dashboard. Turns RED with a loud alert if a fall happens.
-    *   *Vibration:* A live waveform or frequency spectrum chart.
+    *   *Vibration:*
+        *   **Frequency vs. Displacement Graph:** A dynamic chart showing the vibration spectrum.
+        *   **Metrics Table:** A clear table displaying Frequency (Hz), Displacement (μm), Velocity (mm/s), and Acceleration (m/s²).
+        *   **Control Panel:** Expandable sections for "Sensor Parameters" and "App Parameters" to match the Exploration Tool interface.
 *   **Emergency Contact Integration:** If a Fall Event Alert is received, the app will automatically make a phone call or send an SMS message to a pre-configured emergency contact.
 *   **Push Notifications:** Send an alert to the user's phone if a Fall is detected or Vibration exceeds the threshold, even if the app is in the background.
 *   **BLE Connection Manager:** A dedicated screen to scan for your STM32 device, connect, and view signal strength (RSSI).

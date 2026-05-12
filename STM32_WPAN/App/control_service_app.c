@@ -32,6 +32,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32_seq.h"   /* For UTIL_SEQ_SetTask */
+#include "vibration_service_app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -254,9 +255,20 @@ __USED void CONTROL_SERVICE_Sensor_status_SendNotification(void) /* Property Not
 static void Radar_Process_Task(void) {
   if (is_radar_running == 0) return; 
   
-  /* TODO: Based on 'current_radar_mode', call Acconeer radar math here */
+  if (current_radar_mode == 3) /* Vibration Mode */
+  {
+      /* Mock data at ~10Hz */
+      static float mock_freq = 10.0f;
+      VIBRATION_APP_UpdateData(mock_freq, 50.5f, 1.2f, 0.5f);
+      
+      mock_freq += 0.1f;
+      if (mock_freq > 100.0f) mock_freq = 10.0f;
+  }
+  
+  /* Throttle the loop so we don't saturate the BLE buffer (fixes error 0x64) */
+  HAL_Delay(100); 
   
   /* Keep the loop running */
-  // UTIL_SEQ_SetTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, CFG_SEQ_PRIO_0);
+  UTIL_SEQ_SetTask(1<<CFG_TASK_SEND_RADAR_DATA_ID, CFG_SEQ_PRIO_0);
 }
 /* USER CODE END FD_LOCAL_FUNCTIONS */

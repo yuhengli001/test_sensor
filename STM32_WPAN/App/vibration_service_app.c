@@ -82,7 +82,25 @@ static VIBRATION_SERVICE_APP_Context_t VIBRATION_SERVICE_APP_Context;
 uint8_t a_VIBRATION_SERVICE_UpdateCharData[247];
 
 /* USER CODE BEGIN PV */
-
+static VIBRATION_Config_t Vibration_Config = {
+    .measured_point = 80,
+    .amplitude_threshold = 100.0f,
+    .threshold_margin_um = 10.0f,
+    .displacement_mode = 0,
+    .profile = 3,
+    .frame_rate_hz = 10.0f,
+    .frame_rate_limit = 0,
+    .sweep_rate_hz = 3000.0f,
+    .sweeps_per_frame = 128,
+    .hwaas = 16,
+    .double_buffering = 1,
+    .continuous_sweep_mode = 1,
+    .inter_frame_idle_state = 0,
+    .inter_sweep_idle_state = 0,
+    .time_series_length = 1024,
+    .time_filtering_coefficient = 0.95f,
+    .low_frequency_enhancement = 1
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -113,19 +131,23 @@ void VIBRATION_SERVICE_Notification(VIBRATION_SERVICE_NotificationEvt_t *p_Notif
 
     case VIBRATION_SERVICE_VIBRATION_CONFIG_WRITE_EVT:
       /* USER CODE BEGIN Service4Char1_WRITE_EVT */
-
+      if (p_Notification->DataTransfered.Length <= sizeof(VIBRATION_Config_t))
+      {
+          memcpy(&Vibration_Config, p_Notification->DataTransfered.p_Payload, p_Notification->DataTransfered.Length);
+          LOG_INFO_APP("Vibration Config Updated via BLE\r\n");
+      }
       /* USER CODE END Service4Char1_WRITE_EVT */
       break;
 
     case VIBRATION_SERVICE_VIBRATION_DATA_NOTIFY_ENABLED_EVT:
       /* USER CODE BEGIN Service4Char2_NOTIFY_ENABLED_EVT */
-
+      VIBRATION_SERVICE_APP_Context.Vibration_data_Notification_Status = Vibration_data_NOTIFICATION_ON;
       /* USER CODE END Service4Char2_NOTIFY_ENABLED_EVT */
       break;
 
     case VIBRATION_SERVICE_VIBRATION_DATA_NOTIFY_DISABLED_EVT:
       /* USER CODE BEGIN Service4Char2_NOTIFY_DISABLED_EVT */
-
+      VIBRATION_SERVICE_APP_Context.Vibration_data_Notification_Status = Vibration_data_NOTIFICATION_OFF;
       /* USER CODE END Service4Char2_NOTIFY_DISABLED_EVT */
       break;
 
@@ -259,5 +281,26 @@ __USED void VIBRATION_SERVICE_Spectrum_array_SendNotification(void) /* Property 
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
+void VIBRATION_APP_UpdateData(float freq, float displ, float vel, float accel)
+{
+    VIBRATION_Data_t data;
+    data.frequency = freq;
+    data.displacement = displ;
+    data.velocity = vel;
+    data.acceleration = accel;
 
+    VIBRATION_SERVICE_Data_t ble_data;
+    ble_data.p_Payload = (uint8_t*)&data;
+    ble_data.Length = sizeof(VIBRATION_Data_t);
+
+    if (VIBRATION_SERVICE_APP_Context.Vibration_data_Notification_Status == Vibration_data_NOTIFICATION_ON)
+    {
+        VIBRATION_SERVICE_UpdateValue(VIBRATION_SERVICE_VIBRATION_DATA, &ble_data);
+    }
+}
+
+VIBRATION_Config_t* VIBRATION_APP_GetConfig(void)
+{
+    return &Vibration_Config;
+}
 /* USER CODE END FD_LOCAL_FUNCTIONS */
