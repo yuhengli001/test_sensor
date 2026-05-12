@@ -57,6 +57,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_bring_up.c
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/example_detector_distance_M33.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/fall_detector.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/getting_started/vital_signs.c
 
     # === processing ===
     ${CMAKE_CURRENT_SOURCE_DIR}/cortex_m33_gcc/examples/processing/example_processing_amplitude.c
@@ -105,7 +107,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     # Add user defined libraries
     # === A121 lib ===
     acc_detector_distance_a121
-    # acc_detector_presence_a121
+    acc_detector_presence_a121
     # acconeer_exploration_server_a121
     # The core library MUST be last
     acconeer_a121

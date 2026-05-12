@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define SAMPLE_RATE_HZ 20.0f
-#define FFT_N          128
+#define FFT_N          512
 
 typedef enum {
   MODE_NORMAL,
