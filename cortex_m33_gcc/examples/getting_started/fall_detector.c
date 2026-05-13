@@ -3,6 +3,8 @@
 #include <math.h>
 #include "acc_definitions_a121.h"
 #include "acc_integration_log.h"
+#include "main.h"
+#include "fall_service_app.h"
 
 app_config_t global_config = {
     .fall_vel_threshold = 1.5f,
@@ -56,4 +58,6 @@ void process_fall_detection(float velocity, float difference, float current_dist
       sys_mode = MODE_NORMAL; 
       break;
   }
+
+  FALL_APP_UpdateData((uint8_t)sys_mode, velocity, current_dist);
 }

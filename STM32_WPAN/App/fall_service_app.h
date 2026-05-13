@@ -78,7 +78,7 @@ typedef struct
 void FALL_SERVICE_APP_Init(void);
 void FALL_SERVICE_APP_EvtRx(FALL_SERVICE_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
-
+void FALL_APP_UpdateData(uint8_t fall_status, float velocity, float distance);
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

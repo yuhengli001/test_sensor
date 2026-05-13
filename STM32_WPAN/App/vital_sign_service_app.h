@@ -78,7 +78,7 @@ typedef struct
 void VITAL_SIGN_SERVICE_APP_Init(void);
 void VITAL_SIGN_SERVICE_APP_EvtRx(VITAL_SIGN_SERVICE_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
-
+void VITAL_APP_UpdateData(float breathing_bpm, float heart_bpm, float distance);
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

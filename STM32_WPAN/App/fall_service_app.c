@@ -115,13 +115,13 @@ void FALL_SERVICE_Notification(FALL_SERVICE_NotificationEvt_t *p_Notification)
 
     case FALL_SERVICE_FALL_DATA_NOTIFY_ENABLED_EVT:
       /* USER CODE BEGIN Service3Char2_NOTIFY_ENABLED_EVT */
-
+      FALL_SERVICE_APP_Context.Fall_data_Notification_Status = Fall_data_NOTIFICATION_ON;
       /* USER CODE END Service3Char2_NOTIFY_ENABLED_EVT */
       break;
 
     case FALL_SERVICE_FALL_DATA_NOTIFY_DISABLED_EVT:
       /* USER CODE BEGIN Service3Char2_NOTIFY_DISABLED_EVT */
-
+      FALL_SERVICE_APP_Context.Fall_data_Notification_Status = Fall_data_NOTIFICATION_OFF;
       /* USER CODE END Service3Char2_NOTIFY_DISABLED_EVT */
       break;
 
@@ -186,7 +186,22 @@ void FALL_SERVICE_APP_Init(void)
 }
 
 /* USER CODE BEGIN FD */
+void FALL_APP_UpdateData(uint8_t fall_status, float velocity, float distance)
+{
+  if(FALL_SERVICE_APP_Context.Fall_data_Notification_Status == Fall_data_NOTIFICATION_ON)
+  {
+    uint8_t payload[9];
+    payload[0] = fall_status;
+    memcpy(&payload[1], &velocity, 4);
+    memcpy(&payload[5], &distance, 4);
 
+    FALL_SERVICE_Data_t fall_service_notification_data;
+    fall_service_notification_data.p_Payload = payload;
+    fall_service_notification_data.Length = 9;
+
+    FALL_SERVICE_UpdateValue(FALL_SERVICE_FALL_DATA, &fall_service_notification_data);
+  }
+}
 /* USER CODE END FD */
 
 /*************************************************************

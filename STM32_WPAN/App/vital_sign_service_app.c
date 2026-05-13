@@ -202,7 +202,22 @@ void VITAL_SIGN_SERVICE_APP_Init(void)
 }
 
 /* USER CODE BEGIN FD */
+void VITAL_APP_UpdateData(float breathing_bpm, float heart_bpm, float distance)
+{
+  if(VITAL_SIGN_SERVICE_APP_Context.Vital_data_Notification_Status == Vital_data_NOTIFICATION_ON)
+  {
+    uint8_t payload[12];
+    memcpy(&payload[0], &breathing_bpm, 4);
+    memcpy(&payload[4], &heart_bpm, 4);
+    memcpy(&payload[8], &distance, 4);
 
+    VITAL_SIGN_SERVICE_Data_t vital_sign_service_notification_data;
+    vital_sign_service_notification_data.p_Payload = payload;
+    vital_sign_service_notification_data.Length = 12;
+
+    VITAL_SIGN_SERVICE_UpdateValue(VITAL_SIGN_SERVICE_VITAL_DATA, &vital_sign_service_notification_data);
+  }
+}
 /* USER CODE END FD */
 
 /*************************************************************
