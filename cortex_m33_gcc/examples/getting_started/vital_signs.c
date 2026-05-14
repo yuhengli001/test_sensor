@@ -194,7 +194,7 @@ void process_vital_signs(float difference, float current_dist) {
     
     if (h_ok) {
       printf("%" PRIfloat " BPM (SNR: %d)\n", ACC_LOG_FLOAT_TO_INTEGER(bpm_h), (int)snr_h);
-      VITAL_APP_UpdateData(bpm_b, bpm_h, current_dist);
+      VITAL_APP_UpdateData(bpm_b, bpm_h, current_dist); // Update Data for BLE
     } else {
       printf("[Calc... Heart SNR: %d]\n", (int)snr_h);
       VITAL_APP_UpdateData(bpm_b, 0.0f, current_dist); // Send 0 for heart rate if SNR is too low

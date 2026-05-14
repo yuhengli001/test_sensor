@@ -60,8 +60,6 @@ typedef struct __PACKED
 {
   float frequency;     /* Hz */
   float displacement;  /* um */
-  float velocity;      /* mm/s */
-  float acceleration;  /* m/s2 */
 } VIBRATION_Data_t;
 
 typedef struct __PACKED
@@ -108,7 +106,7 @@ typedef struct __PACKED
 void VIBRATION_SERVICE_APP_Init(void);
 void VIBRATION_SERVICE_APP_EvtRx(VIBRATION_SERVICE_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
-void VIBRATION_APP_UpdateData(float freq, float displ, float vel, float accel);
+void VIBRATION_APP_UpdateData(float freq, float displ);
 VIBRATION_Config_t* VIBRATION_APP_GetConfig(void);
 /* USER CODE END EFP */
 

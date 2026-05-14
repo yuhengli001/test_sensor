@@ -88,7 +88,7 @@ static VIBRATION_Config_t Vibration_Config = {
     .threshold_margin_um = 10.0f,
     .displacement_mode = 0,
     .profile = 3,
-    .frame_rate_hz = 10.0f,
+    .frame_rate_hz = 20.0f,
     .frame_rate_limit = 0,
     .sweep_rate_hz = 3000.0f,
     .sweeps_per_frame = 128,
@@ -281,13 +281,11 @@ __USED void VIBRATION_SERVICE_Spectrum_array_SendNotification(void) /* Property 
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
-void VIBRATION_APP_UpdateData(float freq, float displ, float vel, float accel)
+void VIBRATION_APP_UpdateData(float freq, float displ)
 {
     VIBRATION_Data_t data;
     data.frequency = freq;
     data.displacement = displ;
-    data.velocity = vel;
-    data.acceleration = accel;
 
     VIBRATION_SERVICE_Data_t ble_data;
     ble_data.p_Payload = (uint8_t*)&data;

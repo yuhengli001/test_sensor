@@ -37,6 +37,13 @@ static acc_processing_metadata_t proc_meta   = {0};
 /* --- Vibration State --- */
 static acc_vibration_handle_t   *vib_handle  = NULL;
 static acc_vibration_config_t    vib_config  = {0};
+static float                    vib_prev_freq = 0.0f;
+static uint32_t                 vib_stability_counter = 0;
+static bool                     vib_was_stable = false;
+
+#define STABILITY_THRESHOLD 0.5f  /* Hz */
+#define STABILITY_REQUIRED  5     /* Consecutive frames */
+#define RADAR_FRAME_RATE    20.0f /* Hz */
 
 /* --- Presence (Vital/Fall) State --- */
 static acc_detector_presence_handle_t *presence_handle = NULL;
@@ -66,7 +73,23 @@ bool Radar_Adapter_Init(void) {
 }
 
 static bool init_vibration(void) {
-    acc_vibration_preset_set(&vib_config, ACC_VIBRATION_PRESET_LOW_FREQUENCY);
+    /* 1. Start with High Frequency Preset (better for 126Hz tuning fork) */
+    acc_vibration_preset_set(&vib_config, ACC_VIBRATION_PRESET_HIGH_FREQUENCY);
+
+    /* 2. Apply our manual overrides from vibration_service_app.c */
+    // VIBRATION_Config_t *manual = VIBRATION_APP_GetConfig();
+    
+    // vib_config.measured_point              = manual->measured_point;
+    // vib_config.amplitude_threshold         = manual->amplitude_threshold;
+    // vib_config.frame_rate_hz               = manual->frame_rate_hz;
+    // vib_config.sweep_rate_hz               = manual->sweep_rate_hz;
+    // vib_config.sweeps_per_frame            = manual->sweeps_per_frame;
+    // vib_config.hwaas                       = manual->hwaas;
+    // vib_config.time_series_length          = manual->time_series_length;
+    // vib_config.time_filtering_coefficient  = manual->time_filtering_coefficient;
+    // vib_config.low_frequency_enhancement   = manual->low_frequency_enhancement;
+    // vib_config.continuous_sweep_mode       = manual->continuous_sweep_mode;
+    // vib_config.double_buffering            = manual->double_buffering;
 
     vib_handle = acc_vibration_handle_create(&vib_config);
     if (!vib_handle) return false;
@@ -100,7 +123,7 @@ static bool init_presence(void) {
     acc_detector_presence_config_automatic_subsweeps_set(presence_config, true);
     acc_detector_presence_config_signal_quality_set(presence_config, 20.0f);
     acc_detector_presence_config_sweeps_per_frame_set(presence_config, 16);
-    acc_detector_presence_config_frame_rate_set(presence_config, 20.0f); // SAMPLE_RATE_HZ
+    acc_detector_presence_config_frame_rate_set(presence_config, RADAR_FRAME_RATE); // SAMPLE_RATE_HZ
     acc_detector_presence_config_frame_rate_app_driven_set(presence_config, false);
     acc_detector_presence_config_reset_filters_on_prepare_set(presence_config, true);
     acc_detector_presence_config_intra_detection_set(presence_config, true);
@@ -194,18 +217,39 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
             
             float top_freq = 0;
             float top_disp = 0;
-            float top_vel = 0;
-            float top_accel = 0;
 
             if (result.peak_count > 0) {
-                top_disp = result.peak_displacements[0];
-                top_freq = result.peak_frequencies[0];
-                float angular_frequency = 2.0f * M_PI * top_freq;
-                top_vel = (top_disp * angular_frequency) / 1e3f;
-                top_accel = (top_disp * (angular_frequency * angular_frequency)) / 1e6f;
-            }
+                float current_freq = result.peak_frequencies[0];
+                float current_disp = result.peak_displacements[0];
 
-            VIBRATION_APP_UpdateData(top_freq, top_disp, top_vel, top_accel);
+                /* Check stability: Is this frequency close to the last one? */
+                if (fabsf(current_freq - vib_prev_freq) < STABILITY_THRESHOLD) {
+                    vib_stability_counter++;
+                } else {
+                    vib_stability_counter = 0;
+                }
+                vib_prev_freq = current_freq;
+
+                /* Only report if stable for N frames and above displacement threshold */
+                if (vib_stability_counter >= STABILITY_REQUIRED && current_disp > 5.0f) {
+                    top_freq = current_freq;
+                    top_disp = current_disp;
+                    LOG_INFO_APP("[FILTERED VIB] Freq=%.2f Hz\r\n", top_freq);
+                    
+                    VIBRATION_APP_UpdateData(top_freq, top_disp);
+                    vib_was_stable = true;
+                } else if (vib_was_stable) {
+                    /* Vibration just stopped or became unstable - send one '0' update to clear the app */
+                    VIBRATION_APP_UpdateData(0, 0);
+                    vib_was_stable = false;
+                }
+            } else {
+                vib_stability_counter = 0;
+                if (vib_was_stable) {
+                    VIBRATION_APP_UpdateData(0, 0);
+                    vib_was_stable = false;
+                }
+            }
         }
     } else if (mode == RADAR_MODE_VITAL || mode == RADAR_MODE_FALL) {
         if (!presence_handle) return false;
@@ -243,7 +287,7 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
             } else {
                 ema_dist = 0.15f * current_dist + 0.85f * ema_dist;
                 float dist_diff = ema_dist - previous_presence_dist;
-                float velocity = dist_diff * 20.0f; // SAMPLE_RATE_HZ
+                float velocity = dist_diff * RADAR_FRAME_RATE; // Using unified frame rate
                 if (mode == RADAR_MODE_FALL || mode == RADAR_MODE_VITAL) {
                     process_fall_detection(velocity, dist_diff, ema_dist);
                 }
@@ -304,6 +348,10 @@ void Radar_Adapter_Stop(void) {
     if (sensor) { acc_sensor_destroy(sensor); sensor = NULL; }
     if (processing) { acc_processing_destroy(processing); processing = NULL; }
     if (buffer) { acc_integration_mem_free(buffer); buffer = NULL; }
+    
+    vib_stability_counter = 0;
+    vib_prev_freq = 0.0f;
+    vib_was_stable = false;
     
     /* --- Mode-Specific Handle Destruction --- */
     if (vib_handle) { acc_vibration_handle_destroy(vib_handle); vib_handle = NULL; }

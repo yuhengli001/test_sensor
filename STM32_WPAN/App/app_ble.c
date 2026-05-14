@@ -308,9 +308,9 @@ void APP_BLE_Init(void)
                       &Adv_Cancel_Req,
                       0);
 
-    /* Create timer for 10Hz Radar updates */
+    /* Create timer for 20Hz Radar updates (Faster response) */
     UTIL_TIMER_Create(&(bleAppContext.Radar_Update_Timer_Id),
-                      100, // 100ms = 10Hz
+                      50, // 50ms = 20Hz
                       UTIL_TIMER_PERIODIC,
                       &Radar_Timer_Req,
                       0);
