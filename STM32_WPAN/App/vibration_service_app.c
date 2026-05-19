@@ -83,23 +83,8 @@ uint8_t a_VIBRATION_SERVICE_UpdateCharData[247];
 
 /* USER CODE BEGIN PV */
 static VIBRATION_Config_t Vibration_Config = {
+    .preset = 0,  /* HIGH_FREQUENCY */
     .measured_point = 80,
-    .amplitude_threshold = 100.0f,
-    .threshold_margin_um = 10.0f,
-    .displacement_mode = 0,
-    .profile = 3,
-    .frame_rate_hz = 20.0f,
-    .frame_rate_limit = 0,
-    .sweep_rate_hz = 3000.0f,
-    .sweeps_per_frame = 128,
-    .hwaas = 16,
-    .double_buffering = 1,
-    .continuous_sweep_mode = 1,
-    .inter_frame_idle_state = 0,
-    .inter_sweep_idle_state = 0,
-    .time_series_length = 1024,
-    .time_filtering_coefficient = 0.95f,
-    .low_frequency_enhancement = 1
 };
 /* USER CODE END PV */
 
@@ -281,11 +266,16 @@ __USED void VIBRATION_SERVICE_Spectrum_array_SendNotification(void) /* Property 
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
-void VIBRATION_APP_UpdateData(float freq, float displ)
+void VIBRATION_APP_UpdateData(float freq, float displ, float displ_rms, float vel, float vel_rms, float accel, float accel_rms)
 {
     VIBRATION_Data_t data;
-    data.frequency = freq;
-    data.displacement = displ;
+    data.frequency        = freq;
+    data.displacement     = displ;
+    data.displacement_rms = displ_rms;
+    data.velocity         = vel;
+    data.velocity_rms     = vel_rms;
+    data.acceleration     = accel;
+    data.acceleration_rms = accel_rms;
 
     VIBRATION_SERVICE_Data_t ble_data;
     ble_data.p_Payload = (uint8_t*)&data;

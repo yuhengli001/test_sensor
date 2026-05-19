@@ -105,23 +105,21 @@ bool Radar_Adapter_Init(void) {
  * @return  true if the initialization was successful, false otherwise.
 ***********************************************************************************************************************/
 static bool init_vibration(void) {
-    /* 1. Start with High Frequency Preset */
-    acc_vibration_preset_set(&ctx.vib_config, ACC_VIBRATION_PRESET_HIGH_FREQUENCY);
+    VIBRATION_Config_t *cfg = VIBRATION_APP_GetConfig();
 
-    /* 2. Apply our manual overrides from vibration_service_app.c */
-    // VIBRATION_Config_t *manual = VIBRATION_APP_GetConfig();
-    
-    // ctx.vib_config.measured_point              = manual->measured_point;
-    // ctx.vib_config.amplitude_threshold         = manual->amplitude_threshold;
-    // ctx.vib_config.frame_rate_hz               = manual->frame_rate_hz;
-    // ctx.vib_config.sweep_rate_hz               = manual->sweep_rate_hz;
-    // ctx.vib_config.sweeps_per_frame            = manual->sweeps_per_frame;
-    // ctx.vib_config.hwaas                       = manual->hwaas;
-    // ctx.vib_config.time_series_length          = manual->time_series_length;
-    // ctx.vib_config.time_filtering_coefficient  = manual->time_filtering_coefficient;
-    // ctx.vib_config.low_frequency_enhancement   = manual->low_frequency_enhancement;
-    // ctx.vib_config.continuous_sweep_mode       = manual->continuous_sweep_mode;
-    // ctx.vib_config.double_buffering            = manual->double_buffering;
+    /* 1. Load preset (HIGH or LOW frequency) */
+    acc_vibration_preset_t preset = (cfg->preset == 1)
+        ? ACC_VIBRATION_PRESET_LOW_FREQUENCY
+        : ACC_VIBRATION_PRESET_HIGH_FREQUENCY;
+    acc_vibration_preset_set(&ctx.vib_config, preset);
+
+    /* 2. Apply user overrides on top of preset */
+    ctx.vib_config.measured_point = cfg->measured_point;
+    ctx.vib_config.reported_displacement_mode = ACC_VIBRATION_REPORT_DISPLACEMENT_AS_AMPLITUDE;
+
+    LOG_INFO_APP("Vibration init: preset=%s, point=%lu\r\n",
+        (preset == ACC_VIBRATION_PRESET_HIGH_FREQUENCY) ? "HIGH" : "LOW",
+        (unsigned long)cfg->measured_point);
 
     ctx.vib_handle = acc_vibration_handle_create(&ctx.vib_config);
     if (!ctx.vib_handle) return false;
@@ -289,19 +287,28 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
                 if (ctx.vib_stability_counter >= STABILITY_REQUIRED && current_disp > 5.0f) {
                     top_freq = current_freq;
                     top_disp = current_disp;
-                    LOG_INFO_APP("[FILTERED VIB] Freq=%.2f Hz\r\n", top_freq);
-                    
-                    VIBRATION_APP_UpdateData(top_freq, top_disp);
+
+                    float omega        = 2.0f * (float)M_PI * top_freq;
+                    float velocity     = (top_disp * omega) / 1e3f;
+                    float acceleration = (top_disp * omega * omega) / 1e6f;
+                    float disp_rms     = top_disp  / (float)M_SQRT2;
+                    float vel_rms      = velocity   / (float)M_SQRT2;
+                    float accel_rms    = acceleration / (float)M_SQRT2;
+
+                    LOG_INFO_APP("[FILTERED VIB] Freq=%.2f Hz Disp=%.2f um Vel=%.2f mm/s Accel=%.2f m/s^2\r\n",
+                                 top_freq, top_disp, velocity, acceleration);
+
+                    VIBRATION_APP_UpdateData(top_freq, top_disp, disp_rms, velocity, vel_rms, acceleration, accel_rms);
                     ctx.vib_was_stable = true;
                 } else if (ctx.vib_was_stable) {
                     /* Vibration just stopped or became unstable - send one '0' update to clear the app */
-                    VIBRATION_APP_UpdateData(0, 0);
+                    VIBRATION_APP_UpdateData(0, 0, 0, 0, 0, 0, 0);
                     ctx.vib_was_stable = false;
                 }
             } else {
                 ctx.vib_stability_counter = 0;
                 if (ctx.vib_was_stable) {
-                    VIBRATION_APP_UpdateData(0, 0);
+                    VIBRATION_APP_UpdateData(0, 0, 0, 0, 0, 0, 0);
                     ctx.vib_was_stable = false;
                 }
             }

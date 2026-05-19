@@ -14,23 +14,30 @@ typedef enum {
 
 /**
  * @brief Initialize the Radar RSS and HAL. Call once at boot.
+ * 
+ * @return true if the initialization was successful, false otherwise.
  */
 bool Radar_Adapter_Init(void);
 
 /**
  * @brief Start the sensor for a specific mode. Cleans up old mode first.
  * @param mode The mode to start.
+ * 
+ * @return true if the initialization was successful, false otherwise.
  */
 bool Radar_Adapter_Start(Radar_Mode_t mode);
 
 /**
  * @brief Perform one measurement and dispatch data to the appropriate BLE service.
  * @param mode The current mode.
+ * 
+ * @return true if the measurement was successful, false otherwise.
  */
 bool Radar_Adapter_Process(Radar_Mode_t mode);
 
 /**
- * @brief Put sensor to sleep and free memory buffers. Call when hitting "STOP".
+ * @brief Stop the sensor and free memory buffers. Call when hitting "STOP".
+ * 
  */
 void Radar_Adapter_Stop(void);
 

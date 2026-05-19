@@ -80,26 +80,28 @@ These are the instructions the user can send from the app to configure the senso
 
 #### Mode 3: Vibration Parameters
 
-**Basic Settings (Main UI):**
-*   `measured_point` (int): The distance point index to monitor (default 80).
-*   `amplitude_threshold` (int): Minimum signal strength to calculate vibration (default 100).
-*   `threshold_margin_um` (float): Sensitivity margin in μm for peak detection (default 10.0).
-*   `displacement_mode` (enum): Choose between "Amplitude" or "Peak-to-Peak".
+**User-Controllable (Main UI):**
+*   `preset` (enum): Frequency range preset — **High Frequency** (10–5000 Hz, burst mode) or **Low Frequency** (0.1–100 Hz, continuous mode). Selecting a preset loads all underlying sensor parameters automatically (see locked values below).
+*   `measured_point` (int): Distance point index to monitor (default 80). Corresponds to ~`measured_point × 2.5 mm` from the sensor.
+*   `displacement_mode` (enum): **Peak-to-Peak** (total travel, recommended — standard in ISO 10816) or **Amplitude** (raw FFT peak, single-sided).
 
-**Advanced Settings (Hidden/Gear Menu):**
-*   `profile` (int): Radar profile 1-5 (default 3).
-*   `frame_rate_hz` (float): Frame rate in Hz (default 10.0).
-*   `frame_rate_limit` (bool): Enable frame rate limit (default False).
-*   `sweep_rate_hz` (float): Sweep rate in Hz (default 3000.0).
-*   `sweeps_per_frame` (int): Number of sweeps per frame (default 128).
-*   `hwaas` (int): Hardware averaging (default 16).
-*   `double_buffering` (bool): Enable double buffering (default True).
-*   `continuous_sweep_mode` (bool): Enable continuous sweep mode (default True).
-*   `inter_frame_idle_state` (enum): Idle state between frames (Ready, Sleep, Deep Sleep).
-*   `inter_sweep_idle_state` (enum): Idle state between sweeps (Ready, Sleep, Deep Sleep).
-*   `time_series_length` (int): FFT calculation length (default 1024).
-*   `time_filtering_coefficient` (float): Exponential filter coefficient (default 0.95).
-*   `low_frequency_enhancement` (bool): Enable low frequency enhancement (default True).
+**Locked / Hardcoded on STM32 (not sent over BLE):**
+
+| Parameter | High Frequency | Low Frequency | Notes |
+|---|---|---|---|
+| `sweep_rate` | 10000 Hz | 200 Hz | Sets max detectable freq (Nyquist = sweep_rate / 2) |
+| `sweeps_per_frame` | 1024 | 20 | Keeps frame rate ~10 fps for both presets |
+| `lp_coeff` | 0.5 | 0.8 | More smoothing needed for slow low-freq signals |
+| `low_frequency_enhancement` | false | true | Boosts weak low-freq FFT components |
+| `continuous_sweep_mode` | false | true | Burst vs. continuous acquisition |
+| `double_buffering` | false | true | Required when continuous_sweep_mode is on |
+| `amplitude_threshold` | 100.0 | 100.0 | Hardcoded — show diagnostic if signal too weak |
+| `profile` | 3 | 3 | Good general-purpose profile |
+| `frame_rate` | 0 (unconstrained) | 0 | Runs as fast as hardware allows |
+| `hwaas` | 16 | 16 | Balanced SNR vs. speed |
+| `time_series_length` | 1024 | 1024 | freq_resolution = sweep_rate / time_series_length |
+| `inter_frame_idle_state` | READY | READY | No power saving needed |
+| `inter_sweep_idle_state` | READY | READY | No power saving needed |
 
 ---
 
