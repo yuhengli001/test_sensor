@@ -4,6 +4,7 @@
 #include "app_config.h"
 
 void fall_detector_init(void);
-void process_fall_detection(float velocity, float difference, float current_dist);
+void fall_detector_reset_alarm(void);
+void process_fall_detection(float intra_score, float current_dist);
 
 #endif
