@@ -13,8 +13,10 @@ typedef struct {
   float imag;
 } complex_t;
 
-static float distance_history_b[FFT_N] = {0};
-static float distance_history_h[FFT_N] = {0};
+#define WINDOW_LEN 128
+
+static float distance_history_b[WINDOW_LEN] = {0};
+static float distance_history_h[WINDOW_LEN] = {0};
 static uint16_t dist_idx = 0;
 static bool buffer_full = false;
 static uint16_t slide_counter = 0;
@@ -30,11 +32,20 @@ static float a_coeffs_h[4];
 static float filter_states_h[5] = {0};
 static bool filter_initialized = false;
 
+// BPM 历史中值滤波（最近 5 次有效估计值取中值，消除单帧跳变）
+#define BPM_HIST_N 5
+static float bpm_b_hist[BPM_HIST_N];
+static float bpm_h_hist[BPM_HIST_N];
+static int   bpm_b_hist_cnt;
+static int   bpm_h_hist_cnt;
+static int   bpm_b_hist_idx;
+static int   bpm_h_hist_idx;
+
 // 精测 FFT 工作区
 static complex_t s_fft_b[FFT_N];
 static complex_t s_fft_h[FFT_N];
-static float     s_psd_b[FFT_N / 2 + 1];
-static float     s_psd_h[FFT_N / 2 + 1];
+static float     s_psd_b_smooth[FFT_N / 2 + 1];
+static float     s_psd_h_smooth[FFT_N / 2 + 1];
 static float     s_window[FFT_N];
 
 // 粗扫状态（约 2.5KB 额外静态 RAM）
@@ -42,6 +53,52 @@ static float     coarse_buf[COARSE_MAX_CANDS][COARSE_N];
 static int       coarse_fill;
 static bool      coarse_active;
 static complex_t coarse_fft_work[COARSE_N]; // 粗扫专用 FFT 工作区，128点×8B=1KB
+
+// --- LMS ANC 自适应滤波器变量 ---
+#define LMS_ORDER 16
+#define LMS_DELAY 10
+static float lms_w[LMS_ORDER];
+static float lms_x[LMS_ORDER + LMS_DELAY];
+static float lms_mu = 0.002f;
+
+// --- 心率跟踪窗口变量 ---
+static float tracked_heart_freq = 0.0f;
+static uint32_t switch_frame_cnt = 0;
+
+// --- 呼吸跟踪窗口变量 ---
+static float tracked_resp_freq = 0.0f;
+static uint32_t switch_resp_frame_cnt = 0;
+
+// --- 0.05Hz 高通滤波器变量 (用于去除 unwrapped_angle 的绝对 DC 偏置和慢漂) ---
+static float hp_x_prev = 0.0f;
+static float hp_y_prev = 0.0f;
+static bool  hp_first = true;
+
+static float apply_hp(float x) {
+    if (hp_first) {
+        hp_x_prev = x;
+        hp_y_prev = 0.0f;
+        hp_first = false;
+        return 0.0f;
+    }
+    // alpha = 0.9845f (对应 fc = 0.05Hz, dt = 0.05s)
+    float y = 0.9845f * (hp_y_prev + x - hp_x_prev);
+    hp_x_prev = x;
+    hp_y_prev = y;
+    return y;
+}
+
+// 对最多 BPM_HIST_N 个值做插入排序取中值（n≤5，开销极低）
+static float compute_median5(float *buf, int n) {
+    float tmp[BPM_HIST_N];
+    for (int i = 0; i < n; i++) tmp[i] = buf[i];
+    for (int i = 1; i < n; i++) {
+        float v = tmp[i]; int j = i - 1;
+        while (j >= 0 && tmp[j] > v) { tmp[j + 1] = tmp[j]; j--; }
+        tmp[j + 1] = v;
+    }
+    return tmp[n / 2];
+}
 
 // 高斯插值峰值定位：比抛物线插值更适合周期信号的频谱峰形状
 // 在对数域拟合，等价于假设峰形为高斯曲线
@@ -172,36 +229,47 @@ bool vital_signs_coarse_tick(void) {
 
 int vital_signs_coarse_pick_best(int n_candidates) {
     coarse_active = false;
-    int   best_slot  = -1;
-    float best_score = 0.0f;
+    if (n_candidates > COARSE_MAX_CANDS) n_candidates = COARSE_MAX_CANDS;
+    int closest_slot = -1;
 
     for (int s = 0; s < n_candidates; s++) {
-        float r_snr = compute_coarse_snr(s, 0.1f, 0.5f);
+        float r_snr = compute_coarse_snr(s, 0.15f, 0.7f);
         float h_snr = compute_coarse_snr(s, 0.9f,  3.0f);
-        printf("[Coarse] Slot %d: Resp SNR=%.1f  Heart SNR=%.1f\n", s, r_snr, h_snr);
-        // 两个信号都必须高于阈值，score 越高越好
-        if (r_snr > 2.0f && h_snr > 2.0f) {
-            float score = r_snr + h_snr;
-            if (score > best_score) {
-                best_score = score;
-                best_slot  = s;
+        
+        // 为了防止全场几十个点全部打印导致刷屏，只打印有信号迹象的点
+        if (h_snr > 1.2f || r_snr > 1.2f) {
+            printf("[Coarse] Bin %d: Resp SNR=%.1f  Heart SNR=%.1f\n", s, r_snr, h_snr);
+        }
+        
+        // 只要心跳 SNR 合格 (生命体征明确)，就认为该点有人
+        if (h_snr > 1.5f) {
+            if (closest_slot == -1) {
+                closest_slot = s; // 记录从近到远第一个合格的点
             }
         }
     }
-    return best_slot; // -1 表示没有找到合适位置
+    
+    if (closest_slot != -1) {
+        printf("[Coarse] Selected Closest Valid Bin: %d\n", closest_slot);
+        return closest_slot;
+    }
+    return -1; // -1 表示没有找到合适位置
 }
 
 // 把粗扫数据回放进精测滤波器，缩短 FFT 首次触发等待时间
 void vital_signs_replay_coarse(int best_slot) {
     for (int k = 0; k < COARSE_N; k++) {
         float v          = coarse_buf[best_slot][k];
-        float filtered_b = apply_butterworth_b(v);
-        float filtered_h = apply_butterworth_h(v);
+        float hp_v       = apply_hp(v);
+        float filtered_b = apply_butterworth_b(hp_v);
+        float filtered_h = apply_butterworth_h(hp_v);
         distance_history_b[dist_idx] = filtered_b;
         distance_history_h[dist_idx] = filtered_h;
         dist_idx++;
-        if (dist_idx >= FFT_N) { dist_idx = 0; buffer_full = true; }
+        if (dist_idx >= WINDOW_LEN) { dist_idx = 0; buffer_full = true; }
     }
+    // 强制下一帧立刻计算并输出 FFT
+    slide_counter = 10;
 }
 
 // -----------------------------------------------------------------------
@@ -213,10 +281,28 @@ void vital_signs_init(void) {
     memset(filter_states_h, 0, sizeof(filter_states_h));
     memset(distance_history_b, 0, sizeof(distance_history_b));
     memset(distance_history_h, 0, sizeof(distance_history_h));
+    memset(s_psd_b_smooth, 0, sizeof(s_psd_b_smooth));
+    memset(s_psd_h_smooth, 0, sizeof(s_psd_h_smooth));
 
-    acc_algorithm_butter_bandpass(0.1f, 0.5f, SAMPLE_RATE_HZ, b_coeffs_b, a_coeffs_b);
+    acc_algorithm_butter_bandpass(0.15f, 0.7f, SAMPLE_RATE_HZ, b_coeffs_b, a_coeffs_b);
     acc_algorithm_butter_bandpass(0.9f, 3.0f, SAMPLE_RATE_HZ, b_coeffs_h, a_coeffs_h);
     acc_algorithm_hamming(FFT_N, s_window);
+
+    memset(bpm_b_hist, 0, sizeof(bpm_b_hist));
+    memset(bpm_h_hist, 0, sizeof(bpm_h_hist));
+    bpm_b_hist_cnt = 0;  bpm_b_hist_idx = 0;
+    bpm_h_hist_cnt = 0;  bpm_h_hist_idx = 0;
+
+    memset(lms_w, 0, sizeof(lms_w));
+    memset(lms_x, 0, sizeof(lms_x));
+
+    tracked_heart_freq = 0.0f;
+    switch_frame_cnt = 0;
+    tracked_resp_freq = 0.0f;
+    switch_resp_frame_cnt = 0;
+
+    hp_first = true;
+
     filter_initialized = true;
 }
 
@@ -224,15 +310,50 @@ void process_vital_signs(float difference, float current_dist) {
   if (!global_config.enable_vitals_monitoring) return;
   if (!filter_initialized) vital_signs_init();
 
-  // 1. 应用双路独立滤波 (呼吸频段与心跳频段完全隔离)
-  float filtered_b = apply_butterworth_b(difference);
-  float filtered_h = apply_butterworth_h(difference);
+  // 0. 对输入信号（即 unwrapped_angle）进行 0.05Hz 高通滤波，去除绝对 DC 偏置
+  float hp_diff = apply_hp(difference);
 
-  // 2. 存入历史缓冲区
+  // 1. 呼吸信号依然用高通后的信号进行带通滤波
+  float filtered_b = apply_butterworth_b(hp_diff);
+
+  // --- LMS 自适应滤波自消噪 (LMS ANC) ---
+  // 使用高通后的信号（无 DC，幅值约在 -1 ~ 1 之间）作为参考输入移入延迟线
+  for (int i = LMS_ORDER + LMS_DELAY - 1; i > 0; i--) {
+      lms_x[i] = lms_x[i - 1];
+  }
+  lms_x[0] = hp_diff;
+
+  // 计算估算的周期性呼吸（基频+谐波）信号 lms_y
+  float lms_y = 0.0f;
+  for (int i = 0; i < LMS_ORDER; i++) {
+      lms_y += lms_w[i] * lms_x[i + LMS_DELAY];
+  }
+
+  // 时域相消：从高通信号中减去估计的呼吸周期性成分
+  float raw_clean = hp_diff - lms_y;
+
+  // 计算当前参考输入向量的能量（归一化）
+  float lms_energy = 1e-3f;
+  for (int i = 0; i < LMS_ORDER; i++) {
+      float val = lms_x[i + LMS_DELAY];
+      lms_energy += val * val;
+  }
+  float norm_step = lms_mu / lms_energy;
+  if (norm_step > 0.05f) norm_step = 0.05f; // 限制最大步长，保证在信号突变时绝对收敛
+
+  // 更新 LMS 权重 (使用 Leaky NLMS 防止长期参数漂移和发散)
+  for (int i = 0; i < LMS_ORDER; i++) {
+      lms_w[i] = 0.999f * lms_w[i] + 2.0f * norm_step * raw_clean * lms_x[i + LMS_DELAY];
+  }
+
+  // 2. 【关键】对相消后的信号进行心率带通滤波！
+  float clean_h = apply_butterworth_h(raw_clean);
+
+  // 3. 存入历史缓冲区
   distance_history_b[dist_idx] = filtered_b;
-  distance_history_h[dist_idx] = filtered_h;
+  distance_history_h[dist_idx] = clean_h;
   dist_idx++;
-  if (dist_idx >= FFT_N) {
+  if (dist_idx >= WINDOW_LEN) {
     dist_idx = 0;
     buffer_full = true;
   }
@@ -242,70 +363,297 @@ void process_vital_signs(float difference, float current_dist) {
   if (buffer_full && slide_counter >= 10) {
     slide_counter = 0;
 
+    int valid_len = WINDOW_LEN;
     for (int k = 0; k < FFT_N; k++) {
-      s_fft_b[k].real = distance_history_b[(dist_idx + k) % FFT_N] * s_window[k];
-      s_fft_b[k].imag = 0.0f;
-      s_fft_h[k].real = distance_history_h[(dist_idx + k) % FFT_N] * s_window[k];
-      s_fft_h[k].imag = 0.0f;
+      if (k < valid_len) {
+        // 使用 128 点的静态汉明窗
+        float w = 0.54f - 0.46f * cosf(2.0f * 3.14159265f * k / (valid_len - 1));
+        int idx = (dist_idx + k) % WINDOW_LEN;
+        s_fft_b[k].real = distance_history_b[idx] * w;
+        s_fft_b[k].imag = 0.0f;
+        s_fft_h[k].real = distance_history_h[idx] * w;
+        s_fft_h[k].imag = 0.0f;
+      } else {
+        // 零填充 (Zero-Padding) 到 512 点，提供极佳的频域分辨率
+        s_fft_b[k].real = 0.0f;
+        s_fft_b[k].imag = 0.0f;
+        s_fft_h[k].real = 0.0f;
+        s_fft_h[k].imag = 0.0f;
+      }
     }
 
     compute_fft(s_fft_b, FFT_N);
     compute_fft(s_fft_h, FFT_N);
 
     for (int k = 0; k <= FFT_N/2; k++) {
-      s_psd_b[k] = s_fft_b[k].real * s_fft_b[k].real + s_fft_b[k].imag * s_fft_b[k].imag;
-      s_psd_h[k] = s_fft_h[k].real * s_fft_h[k].real + s_fft_h[k].imag * s_fft_h[k].imag;
+      float psd_b_curr = s_fft_b[k].real * s_fft_b[k].real + s_fft_b[k].imag * s_fft_b[k].imag;
+      float psd_h_curr = s_fft_h[k].real * s_fft_h[k].real + s_fft_h[k].imag * s_fft_h[k].imag;
+
+      // 一阶 IIR 滤波时域平滑 PSD，系数为 0.5 (约 1.0 秒更新惯性，响应极其敏锐)
+      if (s_psd_b_smooth[k] == 0.0f) {
+        s_psd_b_smooth[k] = psd_b_curr;
+        s_psd_h_smooth[k] = psd_h_curr;
+      } else {
+        s_psd_b_smooth[k] = 0.5f * s_psd_b_smooth[k] + 0.5f * psd_b_curr;
+        s_psd_h_smooth[k] = 0.5f * s_psd_h_smooth[k] + 0.5f * psd_h_curr;
+      }
     }
 
-    // 搜索呼吸区间: 0.1Hz - 0.5Hz (6 - 30 BPM，排除低频躯体漂移)
-    int b_min = (int)(0.1f * FFT_N / SAMPLE_RATE_HZ);
-    int b_max = (int)(0.5f  * FFT_N / SAMPLE_RATE_HZ);
-    float max_b = -1.0f;
+    // 搜索呼吸区间: 0.15Hz - 0.7Hz (9 - 42 BPM，排除低频躯体漂移)
+    int b_min = (int)(0.15f * FFT_N / SAMPLE_RATE_HZ);
+    if (b_min < 4) b_min = 4; // 确保不包含 DC/超低频慢漂成分 (对于 512点，第 4 瓶对应 9.375 BPM)
+    int b_max = (int)(0.7f  * FFT_N / SAMPLE_RATE_HZ);
+    float freq_delta = SAMPLE_RATE_HZ / FFT_N;
+
+    // 1. 寻找局域极大值作为候选峰
+    #define MAX_RESP_CANDIDATES 4
+    typedef struct {
+        float freq;
+        float power;
+        float score;
+    } resp_cand_t;
+
+    resp_cand_t resp_cands[MAX_RESP_CANDIDATES];
+    int resp_cand_cnt = 0;
+
     float avg_b = 0.0f;
-    int peak_b_idx = b_min;
     for (int k = b_min; k <= b_max; k++) {
-      avg_b += s_psd_b[k];
-      if (s_psd_b[k] > max_b) { max_b = s_psd_b[k]; peak_b_idx = k; }
+        avg_b += s_psd_b_smooth[k];
     }
     avg_b /= (b_max - b_min + 1);
 
-    float freq_delta = SAMPLE_RATE_HZ / FFT_N;
-    float freq_b = gaussian_peak_interp(s_psd_b, peak_b_idx, b_min, b_max, freq_delta);
-    float snr_b = max_b / (avg_b + 1e-6f);
-    bool b_ok = (snr_b > 3.0f);
+    // 搜索局域极大值
+    for (int k = b_min; k <= b_max; k++) {
+        bool is_local_max = true;
+        if (k > 0 && s_psd_b_smooth[k] < s_psd_b_smooth[k-1]) is_local_max = false;
+        if (k < FFT_N/2 && s_psd_b_smooth[k] < s_psd_b_smooth[k+1]) is_local_max = false;
 
-    // 搜索心率区间: 0.9Hz - 3.0Hz (54 - 180 BPM)
+        if (is_local_max) {
+            if (resp_cand_cnt < MAX_RESP_CANDIDATES) {
+                float f = gaussian_peak_interp(s_psd_b_smooth, k, b_min, b_max, freq_delta);
+                resp_cands[resp_cand_cnt].freq = f;
+                resp_cands[resp_cand_cnt].power = s_psd_b_smooth[k];
+                resp_cands[resp_cand_cnt].score = 0.0f;
+                resp_cand_cnt++;
+            }
+        }
+    }
+
+    // 如果未找到任何局域极大值，以下限往里走一点的最强值兜底（避开漂移最严重的 b_min 点）
+    if (resp_cand_cnt == 0) {
+        float max_val = -1.0f;
+        int best_k = b_min + 1;
+        if (best_k > b_max) best_k = b_max;
+        for (int k = b_min + 1; k <= b_max; k++) {
+            if (s_psd_b_smooth[k] > max_val) {
+                max_val = s_psd_b_smooth[k];
+                best_k = k;
+            }
+        }
+        if (max_val < 0.0f) {
+            max_val = s_psd_b_smooth[b_min];
+            best_k = b_min;
+        }
+        float f = gaussian_peak_interp(s_psd_b_smooth, best_k, b_min, b_max, freq_delta);
+        resp_cands[0].freq = f;
+        resp_cands[0].power = max_val;
+        resp_cands[0].score = max_val;
+        resp_cand_cnt = 1;
+    }
+
+    // 2. 对候选峰进行评分 (加上历史跟踪窗临近加权)
+    float best_resp_score = -1.0f;
+    float freq_b_win = resp_cands[0].freq;
+    float power_b_win = resp_cands[0].power;
+
+    for (int i = 0; i < resp_cand_cnt; i++) {
+        float freq = resp_cands[i].freq;
+        float power = resp_cands[i].power;
+
+        float boost = 1.0f;
+        if (tracked_resp_freq > 0.0f) {
+            if (fabsf(freq - tracked_resp_freq) < 0.08f) { // 偏离在 4.8 BPM 以内
+                boost = 2.0f;
+            }
+        }
+
+        float score = power * boost;
+        resp_cands[i].score = score;
+
+        if (score > best_resp_score) {
+            best_resp_score = score;
+            freq_b_win = freq;
+            power_b_win = power;
+        }
+    }
+
+    // 3. 跟踪状态机更新 (冷启动 / 锁定 / 偏离换轨)
+    if (tracked_resp_freq == 0.0f) {
+        tracked_resp_freq = freq_b_win;
+        switch_resp_frame_cnt = 0;
+    } else {
+        if (fabsf(freq_b_win - tracked_resp_freq) < 0.08f) {
+            tracked_resp_freq = 0.9f * tracked_resp_freq + 0.1f * freq_b_win;
+            switch_resp_frame_cnt = 0;
+        } else {
+            switch_resp_frame_cnt++;
+            if (switch_resp_frame_cnt >= 6) { // 连续 6 次更新偏离（约 3.0 秒），重置锁定
+                tracked_resp_freq = freq_b_win;
+                switch_resp_frame_cnt = 0;
+            }
+        }
+    }
+
+    float freq_b = tracked_resp_freq;
+    float max_b = power_b_win;
+    float snr_b = max_b / (avg_b + 1e-6f);
+    bool b_ok = (snr_b > 2.0f);
+
     int h_min = (int)(0.9f * FFT_N / SAMPLE_RATE_HZ);
     int h_max = (int)(3.0f * FFT_N / SAMPLE_RATE_HZ);
-    float max_h = -1.0f;
-    int peak_h_idx = h_min;
+
+    // --- 呼吸高阶谐波主动压制 ---
+    if (b_ok) {
+      for (int m = 3; m <= 6; m++) {
+        float f_h = m * freq_b;
+        int h_idx = (int)(f_h / freq_delta + 0.5f);
+        // 压制谐波中心点及左右相邻各 1 个 bin
+        for (int offset = -1; offset <= 1; offset++) {
+          int idx = h_idx + offset;
+          if (idx >= h_min && idx <= h_max) {
+            s_psd_h_smooth[idx] *= 0.15f; // 压制 85% 的虚假能量，防止拉低真实心率
+          }
+        }
+      }
+    }
+
+    // 搜索心率区间: 0.9Hz - 3.0Hz (54 - 180 BPM)
+    // 1. 寻找局域极大值作为候选峰
+    #define MAX_CANDIDATE_PEAKS 4
+    typedef struct {
+        float freq;
+        float power;
+        float score;
+    } cand_peak_t;
+
+    cand_peak_t candidates[MAX_CANDIDATE_PEAKS];
+    int cand_cnt = 0;
+
     float avg_h = 0.0f;
     for (int k = h_min; k <= h_max; k++) {
-      avg_h += s_psd_h[k];
-      if (s_psd_h[k] > max_h) { max_h = s_psd_h[k]; peak_h_idx = k; }
+        avg_h += s_psd_h_smooth[k];
     }
     avg_h /= (h_max - h_min + 1);
 
-    float freq_h = gaussian_peak_interp(s_psd_h, peak_h_idx, h_min, h_max, freq_delta);
-    
-    // 心跳的 SNR 计算 (由于去除了呼吸频率的干扰，SNR 会更纯粹)
-    float snr_h = max_h / (avg_h + 0.000001f);
-    bool h_ok = (snr_h > 4.0f);
+    // 搜索局域极大值
+    for (int k = h_min + 1; k < h_max; k++) {
+        if (s_psd_h_smooth[k] > s_psd_h_smooth[k-1] && s_psd_h_smooth[k] > s_psd_h_smooth[k+1]) {
+            if (cand_cnt < MAX_CANDIDATE_PEAKS) {
+                float f = gaussian_peak_interp(s_psd_h_smooth, k, h_min, h_max, freq_delta);
+                candidates[cand_cnt].freq = f;
+                candidates[cand_cnt].power = s_psd_h_smooth[k];
+                candidates[cand_cnt].score = 0.0f; // 稍后计算
+                cand_cnt++;
+            }
+        }
+    }
+
+    // 如果未找到局域极大值，以全局最大值兜底
+    if (cand_cnt == 0) {
+        float max_val = -1.0f;
+        int best_k = h_min;
+        for (int k = h_min; k <= h_max; k++) {
+            if (s_psd_h_smooth[k] > max_val) {
+                max_val = s_psd_h_smooth[k];
+                best_k = k;
+            }
+        }
+        float f = gaussian_peak_interp(s_psd_h_smooth, best_k, h_min, h_max, freq_delta);
+        candidates[0].freq = f;
+        candidates[0].power = max_val;
+        candidates[0].score = max_val;
+        cand_cnt = 1;
+    }
+
+    // 2. 对每个候选峰进行评分 (呼吸谐波压制 + 跟踪窗临近加权)
+    float best_score = -1.0f;
+    float freq_h_win = candidates[0].freq;
+    float power_h_win = candidates[0].power;
+
+    for (int i = 0; i < cand_cnt; i++) {
+        float freq = candidates[i].freq;
+        float power = candidates[i].power;
+        
+        // A. 呼吸谐波惩罚：若靠近呼吸高阶谐波(3~6倍)，乘以 0.1 惩罚系数
+        float penalty = 1.0f;
+        if (b_ok) {
+            for (int m = 3; m <= 6; m++) {
+                float harmonic_f = m * freq_b;
+                if (fabsf(freq - harmonic_f) < 0.08f) { // 偏离在 0.08Hz 以内
+                    penalty = 0.1f;
+                    break;
+                }
+            }
+        }
+
+        // B. 跟踪窗临近加权：若靠近上一次跟踪的频率，乘以 2.0 增益系数
+        float boost = 1.0f;
+        if (tracked_heart_freq > 0.0f) {
+            if (fabsf(freq - tracked_heart_freq) < 0.15f) { // 偏离在 0.15Hz (9 BPM) 以内
+                boost = 2.0f;
+            }
+        }
+
+        float score = power * penalty * boost;
+        candidates[i].score = score;
+
+        if (score > best_score) {
+            best_score = score;
+            freq_h_win = freq;
+            power_h_win = power;
+        }
+    }
+
+    // 3. 跟踪状态机更新 (冷启动 / 锁定 / 偏离换轨)
+    if (tracked_heart_freq == 0.0f) {
+        tracked_heart_freq = freq_h_win;
+        switch_frame_cnt = 0;
+    } else {
+        if (fabsf(freq_h_win - tracked_heart_freq) < 0.15f) {
+            // 锁定更新 (一阶低通)
+            tracked_heart_freq = 0.9f * tracked_heart_freq + 0.1f * freq_h_win;
+            switch_frame_cnt = 0;
+        } else {
+            // 偏离帧数累加
+            switch_frame_cnt++;
+            if (switch_frame_cnt >= 6) { // 连续 6 次更新偏离（约 3.0 秒），强制打破锁定换轨
+                tracked_heart_freq = freq_h_win;
+                switch_frame_cnt = 0;
+            }
+        }
+    }
+
+    float freq_h = tracked_heart_freq;
+    float snr_h = power_h_win / (avg_h + 0.000001f);
 
     float bpm_b = freq_b * 60.0f;
     float bpm_h = freq_h * 60.0f;
 
     printf("[Vitals] Dist: %" PRIfloat "m | Resp: ", ACC_LOG_FLOAT_TO_INTEGER(current_dist));
-    if (b_ok) {
-      printf("%" PRIfloat " BPM (SNR: %d)", ACC_LOG_FLOAT_TO_INTEGER(bpm_b), (int)snr_b);
-    } else {
-      printf("[Calc... Resp SNR: %d]", (int)snr_b);
-    }
+    bpm_b_hist[bpm_b_hist_idx] = bpm_b;
+    bpm_b_hist_idx = (bpm_b_hist_idx + 1) % BPM_HIST_N;
+    if (bpm_b_hist_cnt < BPM_HIST_N) bpm_b_hist_cnt++;
+    float smooth_b = compute_median5(bpm_b_hist, bpm_b_hist_cnt);
+    printf("%" PRIfloat " BPM (SNR: %d)", ACC_LOG_FLOAT_TO_INTEGER(smooth_b), (int)snr_b);
 
     printf(" | Heart: ");
+    bpm_h_hist[bpm_h_hist_idx] = bpm_h;
+    bpm_h_hist_idx = (bpm_h_hist_idx + 1) % BPM_HIST_N;
+    if (bpm_h_hist_cnt < BPM_HIST_N) bpm_h_hist_cnt++;
+    float smooth_h = compute_median5(bpm_h_hist, bpm_h_hist_cnt);
     if (h_ok) {
-      printf("%" PRIfloat " BPM (SNR: %d)\n", ACC_LOG_FLOAT_TO_INTEGER(bpm_h), (int)snr_h);
-      VITAL_APP_UpdateData(bpm_b, bpm_h, current_dist); // Update Data for BLE
+      printf("%" PRIfloat " BPM (SNR: %d)\n", ACC_LOG_FLOAT_TO_INTEGER(smooth_h), (int)snr_h);
+      VITAL_APP_UpdateData(bpm_b, smooth_h, current_dist); // Update Data for BLE
     } else {
       printf("[Calc... Heart SNR: %d]\n", (int)snr_h);
       VITAL_APP_UpdateData(bpm_b, 0.0f, current_dist); // Send 0 for heart rate if SNR is too low

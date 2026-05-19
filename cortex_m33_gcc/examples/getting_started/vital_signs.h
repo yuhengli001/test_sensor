@@ -4,7 +4,7 @@
 #include "app_config.h"
 
 #define COARSE_N         128   // 粗扫帧数 = 6.4s @20Hz，2的幂次，可直接 FFT
-#define COARSE_MAX_CANDS 3     // 最多同时评估的候选 bin 数
+#define COARSE_MAX_CANDS 64    // 最多同时评估的候选 bin 数 (全频段扫描)
 
 // --- 精测接口 ---
 void vital_signs_init(void);
