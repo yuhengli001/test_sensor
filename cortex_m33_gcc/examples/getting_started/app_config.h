@@ -14,7 +14,7 @@ typedef enum {
 } system_mode_t;
 
 typedef struct {
-  float fall_vel_threshold;
+  float fall_score_threshold;
   float still_threshold;
   uint32_t confirm_period_sec;
   bool enable_fall_detection;
