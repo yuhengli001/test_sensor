@@ -89,7 +89,7 @@ These are the instructions the user can send from the app to configure the senso
 
 | Parameter | High Frequency | Low Frequency | Notes |
 |---|---|---|---|
-| `sweep_rate` | 10000 Hz | 200 Hz | Sets max detectable freq (Nyquist = sweep_rate / 2) |
+| `sweep_rate` | 10000 Hz | 200 Hz | Sets max detectable freq (Nyquist = sweep_rate / 2). Both presets optimized for 0.2 m (point 80). |
 | `sweeps_per_frame` | 1024 | 20 | Keeps frame rate ~10 fps for both presets |
 | `lp_coeff` | 0.5 | 0.8 | More smoothing needed for slow low-freq signals |
 | `low_frequency_enhancement` | false | true | Boosts weak low-freq FFT components |
