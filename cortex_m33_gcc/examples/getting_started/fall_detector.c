@@ -84,5 +84,5 @@ void process_fall_detection(float intra_score, float current_dist) {
       break;
   }
 
-  FALL_APP_UpdateData((uint8_t)sys_mode, velocity, current_dist);
+  FALL_APP_UpdateData((uint8_t)sys_mode, 0.0f, current_dist);
 }

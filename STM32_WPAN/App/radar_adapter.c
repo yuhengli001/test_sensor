@@ -31,6 +31,8 @@
 #define STABILITY_REQUIRED  5     /* Consecutive frames */
 #define RADAR_FRAME_RATE    20.0f /* Hz */
 
+typedef enum { DET_SEARCHING, DET_COARSE, DET_MEASURING } det_phase_t;
+
 typedef struct {
     /* --- Common State --- */
     acc_sensor_t             *sensor;
@@ -59,6 +61,16 @@ typedef struct {
     uint32_t                  missing_target_count;
     float                     last_known_dist;
     float                     ema_dist;
+
+    /* Coarse scan state machine */
+    det_phase_t               det_phase;
+    int                       tracked_index;
+    uint32_t                  phase_renorm_counter;
+    int                       n_candidates;
+    int                       candidate_bins[COARSE_MAX_CANDS];
+    float                     cand_prev_angle[COARSE_MAX_CANDS];
+    float                     cand_unwrapped[COARSE_MAX_CANDS];
+    bool                      cand_first_phase[COARSE_MAX_CANDS];
 } Radar_Adapter_Context_t;
 
 static Radar_Adapter_Context_t ctx = {0};
@@ -191,11 +203,17 @@ static bool init_presence(void) {
 
     fall_detector_init();
     vital_signs_init();
-    ctx.first_phase = true;
-    ctx.unwrapped_angle = 0.0f;
+    ctx.first_phase          = true;
+    ctx.unwrapped_angle      = 0.0f;
     ctx.has_previous_presence = false;
     ctx.missing_target_count = 0;
-    ctx.last_known_dist = 0.0f;
+    ctx.last_known_dist      = 0.0f;
+    ctx.ema_dist             = 0.0f;
+
+    ctx.det_phase            = DET_SEARCHING;
+    ctx.tracked_index        = -1;
+    ctx.phase_renorm_counter = 0;
+    ctx.n_candidates         = 0;
 
     return true;
 }
@@ -229,6 +247,32 @@ bool Radar_Adapter_Start(Radar_Mode_t mode) {
     }
     
     return false;
+}
+
+static float update_phase(const acc_detector_presence_result_t *res,
+                           uint16_t num_points, uint16_t spf, int bin,
+                           float *prev_a, bool *first, float *unwrapped)
+{
+    float complex mean = 0.0f + 0.0f * I;
+    for (int s = 0; s < spf; s++) {
+        acc_int16_complex_t p = res->processing_result.frame[s * num_points + bin];
+        mean += (float)p.real + (float)p.imag * I;
+    }
+    mean /= spf;
+
+    float angle = cargf(mean);
+    if (*first) {
+        *prev_a    = angle;
+        *unwrapped = angle;
+        *first     = false;
+    } else {
+        float diff = angle - *prev_a;
+        if (diff >  (float)M_PI) diff -= 2.0f * (float)M_PI;
+        if (diff < -(float)M_PI) diff += 2.0f * (float)M_PI;
+        *unwrapped += diff;
+        *prev_a     = angle;
+    }
+    return *unwrapped;
 }
 
 /***********************************************************************************************************************
@@ -315,7 +359,7 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
         }
     } else if (mode == RADAR_MODE_VITAL || mode == RADAR_MODE_FALL) {
         if (!ctx.presence_handle) return false;
-        
+
         acc_detector_presence_result_t result;
         if (!acc_detector_presence_process(ctx.presence_handle, ctx.buffer, &result)) return false;
 
@@ -332,70 +376,123 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
             return false;
         }
 
+        if (result.depthwise_presence_scores_length < 2) return true;
+
+        const float RANGE_START = 0.3f;
+        const float RANGE_END   = 2.5f;
+        float step_length = (RANGE_END - RANGE_START) / (float)(result.depthwise_presence_scores_length - 1);
+
+        int prev_tracked = ctx.tracked_index;
+
+        /* --- Smart Target Lock --- */
         if (result.presence_detected) {
-            ctx.last_known_dist = result.presence_distance;
             ctx.missing_target_count = 0;
+            if (ctx.tracked_index == -1) {
+                float max_s = 0.0f;
+                for (uint32_t i = 0; i < result.depthwise_presence_scores_length; i++) {
+                    if (result.depthwise_inter_presence_scores[i] > max_s) {
+                        max_s = result.depthwise_inter_presence_scores[i];
+                        ctx.tracked_index = (int)i;
+                    }
+                }
+            } else {
+                float locked_dist = RANGE_START + ctx.tracked_index * step_length;
+                if (fabsf(result.presence_distance - locked_dist) > 0.4f) {
+                    ctx.tracked_index = -1;
+                    ctx.ema_dist      = 0.0f;
+                }
+            }
         } else {
-            ctx.missing_target_count++;
+            if (ctx.tracked_index != -1) {
+                ctx.missing_target_count++;
+                if (ctx.missing_target_count > (uint32_t)(10.0f * RADAR_FRAME_RATE)) {
+                    ctx.tracked_index        = -1;
+                    ctx.ema_dist             = 0.0f;
+                    ctx.missing_target_count = 0;
+                }
+            } else {
+                ctx.ema_dist = 0.0f;
+            }
         }
 
-        if (ctx.last_known_dist > 0.1f && ctx.missing_target_count < 40) { // 2 seconds @ 20Hz
-            float current_dist = ctx.last_known_dist;
-            
-            if (!ctx.has_previous_presence) {
-                ctx.ema_dist = current_dist;
-                ctx.previous_presence_dist = current_dist;
-                ctx.has_previous_presence = true;
-            } else {
-                ctx.ema_dist = 0.15f * current_dist + 0.85f * ctx.ema_dist;
-                float dist_diff = ctx.ema_dist - ctx.previous_presence_dist;
-                float velocity = dist_diff * RADAR_FRAME_RATE; // Using unified frame rate
-                if (mode == RADAR_MODE_FALL || mode == RADAR_MODE_VITAL) {
-                    process_fall_detection(velocity, dist_diff, ctx.ema_dist);
-                }
-                ctx.previous_presence_dist = ctx.ema_dist;
-            }
+        uint16_t spf = acc_detector_presence_config_sweeps_per_frame_get(ctx.presence_config);
 
-            int index = 0;
-            float max_score = 0.0f;
-            for (uint32_t i = 0; i < result.depthwise_presence_scores_length; i++) {
-                if (result.depthwise_inter_presence_scores[i] > max_score) {
-                    max_score = result.depthwise_inter_presence_scores[i];
-                    index = (int)i;
+        /* --- Transition: new target → start coarse scan --- */
+        if (prev_tracked == -1 && ctx.tracked_index != -1) {
+            ctx.det_phase    = DET_COARSE;
+            ctx.n_candidates = 0;
+            for (int b = ctx.tracked_index - 1; b <= ctx.tracked_index + 1; b++) {
+                if (b >= 0 && b < (int)result.depthwise_presence_scores_length
+                           && ctx.n_candidates < COARSE_MAX_CANDS) {
+                    ctx.candidate_bins[ctx.n_candidates]   = b;
+                    ctx.cand_prev_angle[ctx.n_candidates]  = 0.0f;
+                    ctx.cand_unwrapped[ctx.n_candidates]   = 0.0f;
+                    ctx.cand_first_phase[ctx.n_candidates] = true;
+                    ctx.n_candidates++;
                 }
             }
+            vital_signs_coarse_start();
+            LOG_INFO_APP("[System] Target appeared, starting coarse sweep (%d candidates)\r\n", ctx.n_candidates);
+        }
 
-            if (index >= 0 && index < ctx.presence_num_points) {
-                float complex mean_sweep = 0.0f + 0.0f * I;
-                uint16_t sweeps_per_frame = acc_detector_presence_config_sweeps_per_frame_get(ctx.presence_config);
-                for (int s = 0; s < sweeps_per_frame; s++) {
-                    acc_int16_complex_t point = result.processing_result.frame[s * ctx.presence_num_points + index];
-                    mean_sweep += (float)point.real + (float)point.imag * I;
+        /* --- Transition: target lost → back to searching --- */
+        if (prev_tracked != -1 && ctx.tracked_index == -1) {
+            vital_signs_init();
+            ctx.first_phase          = true;
+            ctx.phase_renorm_counter = 0;
+            ctx.det_phase            = DET_SEARCHING;
+        }
+
+        /* --- Main state machine --- */
+        if (ctx.tracked_index != -1) {
+            float raw_dist = RANGE_START + ctx.tracked_index * step_length;
+            if (ctx.ema_dist == 0.0f) ctx.ema_dist = raw_dist;
+            else ctx.ema_dist = 0.15f * raw_dist + 0.85f * ctx.ema_dist;
+            float current_dist = ctx.ema_dist;
+
+            if (ctx.det_phase == DET_COARSE) {
+                for (int c = 0; c < ctx.n_candidates; c++) {
+                    float ua = update_phase(&result, ctx.presence_num_points, spf,
+                                            ctx.candidate_bins[c],
+                                            &ctx.cand_prev_angle[c],
+                                            &ctx.cand_first_phase[c],
+                                            &ctx.cand_unwrapped[c]);
+                    vital_signs_coarse_feed(c, ua);
                 }
-                mean_sweep /= sweeps_per_frame;
-
-                float angle = cargf(mean_sweep);
-
-                if (ctx.first_phase) {
-                    ctx.prev_angle = angle;
-                    ctx.unwrapped_angle = angle;
-                    ctx.first_phase = false;
-                } else {
-                    float angle_diff = angle - ctx.prev_angle;
-                    if (angle_diff > M_PI) angle_diff -= 2.0f * M_PI;
-                    else if (angle_diff < -M_PI) angle_diff += 2.0f * M_PI;
-                    ctx.unwrapped_angle += angle_diff;
-                    ctx.prev_angle = angle;
+                if (vital_signs_coarse_tick()) {
+                    int best = vital_signs_coarse_pick_best(ctx.n_candidates);
+                    if (best >= 0) {
+                        ctx.tracked_index        = ctx.candidate_bins[best];
+                        ctx.prev_angle           = ctx.cand_prev_angle[best];
+                        ctx.unwrapped_angle      = ctx.cand_unwrapped[best];
+                        ctx.first_phase          = false;
+                        ctx.phase_renorm_counter = 0;
+                        ctx.det_phase            = DET_MEASURING;
+                        vital_signs_init();
+                        vital_signs_replay_coarse(best);
+                        LOG_INFO_APP("[System] Coarse done! Best dist %.2fm, switching to fine mode\r\n",
+                                     RANGE_START + ctx.tracked_index * step_length);
+                    } else {
+                        LOG_INFO_APP("[System] Coarse failed, searching again\r\n");
+                        ctx.tracked_index = -1;
+                        ctx.ema_dist      = 0.0f;
+                        ctx.det_phase     = DET_SEARCHING;
+                    }
                 }
 
-                if (mode == RADAR_MODE_VITAL || mode == RADAR_MODE_FALL) {
-                    process_vital_signs(ctx.unwrapped_angle, current_dist);
+            } else if (ctx.det_phase == DET_MEASURING) {
+                if (++ctx.phase_renorm_counter >= (uint32_t)(600.0f * RADAR_FRAME_RATE)) {
+                    ctx.first_phase          = true;
+                    ctx.phase_renorm_counter = 0;
+                    vital_signs_init();
                 }
+
+                update_phase(&result, ctx.presence_num_points, spf, ctx.tracked_index,
+                             &ctx.prev_angle, &ctx.first_phase, &ctx.unwrapped_angle);
+
+                process_vital_signs(ctx.unwrapped_angle, current_dist);
+                process_fall_detection(result.intra_presence_score, current_dist);
             }
-        } else if (ctx.missing_target_count >= 40) {
-            ctx.has_previous_presence = false;
-            ctx.first_phase = true;
-            ctx.last_known_dist = 0.0f;
         }
     }
     
