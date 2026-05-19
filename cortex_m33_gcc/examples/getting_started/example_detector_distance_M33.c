@@ -35,10 +35,12 @@
 static bool do_sensor_calibration(acc_sensor_t *sensor, acc_cal_result_t *cal_result, void *buffer, uint32_t buffer_size);
 
 // 从指定 bin 提取相位并做角度解包，返回当前 unwrapped 值
+// out_amp：若非 NULL，写入均值相量幅度（相干度指标）。幅度越高说明信号越纯净。
 static float update_phase(const acc_detector_presence_result_t  *res,
                            const acc_detector_presence_metadata_t *meta,
                            uint16_t spf, int bin,
-                           float *prev_a, bool *first, float *unwrapped)
+                           float *prev_a, bool *first, float *unwrapped,
+                           float *out_amp)
 {
     float complex mean = 0.0f + 0.0f * I;
     for (int s = 0; s < spf; s++) {
@@ -46,6 +48,8 @@ static float update_phase(const acc_detector_presence_result_t  *res,
         mean += (float)p.real + (float)p.imag * I;
     }
     mean /= spf;
+
+    if (out_amp != NULL) *out_amp = cabsf(mean);
 
     float angle = cargf(mean);
     if (*first) {
@@ -67,16 +71,12 @@ static void cleanup(acc_detector_presence_handle_t *presence_handle,
                     acc_sensor_t                   *sensor,
                     void                           *buffer);
 
-// 相位追踪相关的静态变量
-static float prev_angle = 0.0f;
-static float unwrapped_angle = 0.0f;
-static bool first_phase = true;
-static float previous_presence_dist = 0.0f;
-static bool has_previous_presence = false;
-static uint32_t missing_target_count = 0;
-
-static float last_known_dist = 0.0f;
-static float ema_dist = 0.0f;
+// --- 目标锁定与相位追踪 ---
+static float    prev_angle           = 0.0f;  // 上一帧相位，用于增量解包
+static float    unwrapped_angle      = 0.0f;  // 累计展开后的连续相位
+static bool     first_phase          = true;  // 首帧标志，跳过差分计算
+static uint32_t missing_target_count = 0;     // 目标消失帧计数（超 10s 释放锁）
+static float    ema_dist             = 0.0f;  // 距离 EMA 低通滤波输出
 
 int acc_example_detector_distance(int argc, char *argv[]) {
   (void)argc;
@@ -104,7 +104,7 @@ int acc_example_detector_distance(int argc, char *argv[]) {
   }
 
   // 配置存在感探测器 (精细化高精度实验室模式)
-  acc_detector_presence_config_start_set(presence_config, 0.2f);
+  acc_detector_presence_config_start_set(presence_config, 0.25f);
   acc_detector_presence_config_end_set(presence_config, 1.2f);
   acc_detector_presence_config_automatic_subsweeps_set(presence_config, false); // 固定步长模式
   acc_detector_presence_config_signal_quality_set(presence_config, 60.0f);      // 极致信号质量
@@ -171,11 +171,10 @@ int acc_example_detector_distance(int argc, char *argv[]) {
   typedef enum { DET_SEARCHING, DET_COARSE, DET_MEASURING } det_phase_t;
   det_phase_t det_phase = DET_SEARCHING;
 
-  int tracked_index = -1;
-  int index         = -1;
-  uint32_t phase_renorm_counter = 0;
+  int      tracked_index        = -1;  // 当前锁定 bin（-1 = 未锁定）
+  uint32_t phase_renorm_counter = 0;   // 相位基准定时重置计数（每 10 分钟）
 
-  // 候选 bin（粗扫阶段同时追踪 tracked ±1 三个位置）
+  // 粗扫：并行追踪全部候选 bin 的相位状态
   int   candidate_bins[COARSE_MAX_CANDS];
   int   n_candidates = 0;
   float cand_prev_angle[COARSE_MAX_CANDS];
@@ -229,7 +228,7 @@ int acc_example_detector_distance(int argc, char *argv[]) {
     // 目标：锁定最近的人体峰值，绝不因为微小扰动而切到墙上。
 
     // 必须与 presence_config 的 start/end 保持一致
-    const float RANGE_START = 0.2f;
+    const float RANGE_START = 0.25f;
     const float RANGE_END   = 1.2f;
 
     if (result.depthwise_presence_scores_length < 2) {
@@ -237,91 +236,58 @@ int acc_example_detector_distance(int argc, char *argv[]) {
     }
     float step_length = (RANGE_END - RANGE_START) / (result.depthwise_presence_scores_length - 1);
 
-    int prev_tracked = tracked_index;
-
     if (result.presence_detected) {
       missing_target_count = 0;
-      if (tracked_index == -1) {
-        // [搜索模式] 寻找全场最高能量点
-        float max_s = 0.0f;
-        for (uint32_t i = 0; i < result.depthwise_presence_scores_length; i++) {
-          if (result.depthwise_inter_presence_scores[i] > max_s) {
-            max_s = result.depthwise_inter_presence_scores[i];
-            tracked_index = (int)i;
-          }
+      if (det_phase == DET_SEARCHING) {
+        // [搜索模式] 不再依赖能量初筛，而是触发全频段扫描
+        det_phase = DET_COARSE;
+        n_candidates = 0;
+        // 把所有距离点都纳入候选
+        for (uint32_t b = 0; b < result.depthwise_presence_scores_length; b++) {
+            if (n_candidates < COARSE_MAX_CANDS) {
+                candidate_bins[n_candidates]    = b;
+                cand_prev_angle[n_candidates]   = 0.0f;
+                cand_unwrapped[n_candidates]    = 0.0f;
+                cand_first_phase[n_candidates]  = true;
+                n_candidates++;
+            }
         }
-      } else {
-        // [锁定模式] 仅在目标发生大距离漂移时才重新搜索
-        float locked_dist = RANGE_START + tracked_index * step_length;
-        if (fabsf(result.presence_distance - locked_dist) > 0.4f) {
-           tracked_index = -1;
-           ema_dist = 0.0f;
-        }
+        vital_signs_coarse_start();
+        printf("[System] Target appeared, starting FULL frequency scan (%d bins)...\n", n_candidates);
       }
     } else {
-      if (tracked_index != -1) {
+      if (det_phase == DET_MEASURING && tracked_index != -1) {
         missing_target_count++;
         // Allow up to 10 seconds of "stillness" before dropping the target lock
         if (missing_target_count > (uint32_t)(10.0f * SAMPLE_RATE_HZ)) {
           tracked_index = -1;
           ema_dist = 0.0f;
           missing_target_count = 0;
+          det_phase = DET_SEARCHING;
+          printf("[System] Target lost (timeout), returning to search...\n");
         }
-      } else {
+      } else if (det_phase == DET_SEARCHING) {
         tracked_index = -1;
         ema_dist = 0.0f;
       }
+      // DET_COARSE：允许粗扫跑完，无目标时 FFT 结果自然无效
     }
 
     uint16_t spf = acc_detector_presence_config_sweeps_per_frame_get(presence_config);
 
-    // --- 状态转换：目标新出现 → 启动粗扫 ---
-    if (prev_tracked == -1 && tracked_index != -1) {
-      det_phase   = DET_COARSE;
-      n_candidates = 0;
-      int lo = tracked_index - 1;
-      int hi = tracked_index + 1;
-      for (int b = lo; b <= hi; b++) {
-        if (b >= 0 && b < (int)result.depthwise_presence_scores_length) {
-          candidate_bins[n_candidates]    = b;
-          cand_prev_angle[n_candidates]   = 0.0f;
-          cand_unwrapped[n_candidates]    = 0.0f;
-          cand_first_phase[n_candidates]  = true;
-          n_candidates++;
-        }
-      }
-      vital_signs_coarse_start();
-      printf("[System] Target appeared, starting coarse sweep (%d candidates)...\n", n_candidates);
-    }
-
-    // --- 状态转换：目标丢失 → 回到搜索 ---
-    if (prev_tracked != -1 && tracked_index == -1) {
-      vital_signs_init();
-      first_phase           = true;
-      phase_renorm_counter  = 0;
-      det_phase             = DET_SEARCHING;
-    }
-
     // --- 主状态机 ---
-    if (tracked_index != -1) {
-      float raw_dist   = RANGE_START + tracked_index * step_length;
-      if (ema_dist == 0.0f) ema_dist = raw_dist;
-      else ema_dist = 0.15f * raw_dist + 0.85f * ema_dist;
-      float current_dist = ema_dist;
-
-      if (det_phase == DET_COARSE) {
+    if (det_phase == DET_COARSE) {
         // 并行更新所有候选 bin 的相位，喂入粗扫缓冲
         for (int c = 0; c < n_candidates; c++) {
           float ua = update_phase(&result, &metadata, spf, candidate_bins[c],
-                                  &cand_prev_angle[c], &cand_first_phase[c], &cand_unwrapped[c]);
+                                  &cand_prev_angle[c], &cand_first_phase[c], &cand_unwrapped[c], NULL);
           vital_signs_coarse_feed(c, ua);
         }
         // 每帧计数一次，满 COARSE_N 帧后评选
         if (vital_signs_coarse_tick()) {
           int best = vital_signs_coarse_pick_best(n_candidates);
           if (best >= 0) {
-            index         = candidate_bins[best];
-            tracked_index = index;
+            tracked_index = candidate_bins[best];
             // 精测初始化：回放粗扫数据热启动滤波器，减少等待时间
             vital_signs_init();
             vital_signs_replay_coarse(best);
@@ -331,8 +297,12 @@ int acc_example_detector_distance(int argc, char *argv[]) {
             first_phase     = false;
             phase_renorm_counter = 0;
             det_phase       = DET_MEASURING;
+            
+            float raw_dist   = RANGE_START + tracked_index * step_length;
+            ema_dist = raw_dist; // 首次锁定直接使用 raw_dist
+            
             printf("[System] Coarse sweep done! Best dist %.2fm, switching to fine mode\n",
-                   RANGE_START + index * step_length);
+                   RANGE_START + tracked_index * step_length);
           } else {
             printf("[System] Coarse sweep failed to find vital signs, searching again...\n");
             tracked_index = -1;
@@ -340,9 +310,36 @@ int acc_example_detector_distance(int argc, char *argv[]) {
             det_phase     = DET_SEARCHING;
           }
         }
+    } else if (det_phase == DET_MEASURING && tracked_index != -1) {
+        
+        // --- 亚像素级距离动态追踪 (Sub-bin Distance Tracking) ---
+        // 计算当前 bin 和相邻 bin 的能量重心，实现平滑的距离输出
+        float s_lo = (tracked_index > 0) ? result.depthwise_inter_presence_scores[tracked_index - 1] : 0.0f;
+        float s_ce = result.depthwise_inter_presence_scores[tracked_index];
+        float s_hi = (tracked_index < (int)result.depthwise_presence_scores_length - 1) ? result.depthwise_inter_presence_scores[tracked_index + 1] : 0.0f;
+        
+        float sum_s = s_lo + s_ce + s_hi + 0.001f;
+        float offset = (s_hi - s_lo) / sum_s; // 范围约 -1.0 到 +1.0
+        
+        // 如果重心严重偏移，执行物理 Bin 切换，并重置相位参考点以防波形突变
+        if (offset > 0.4f && s_hi > 2.0f) {
+            tracked_index++;
+            first_phase = true; 
+            offset = 0.0f;
+        } else if (offset < -0.4f && s_lo > 2.0f) {
+            tracked_index--;
+            first_phase = true;
+            offset = 0.0f;
+        } else {
+            // 限制平滑偏移的范围
+            if (offset > 0.5f) offset = 0.5f;
+            if (offset < -0.5f) offset = -0.5f;
+        }
 
-      } else if (det_phase == DET_MEASURING) {
-        index = tracked_index;
+        float raw_dist = RANGE_START + (tracked_index + offset) * step_length;
+        if (ema_dist == 0.0f) ema_dist = raw_dist;
+        else ema_dist = 0.05f * raw_dist + 0.95f * ema_dist; // 较强的低通平滑
+        float current_dist = ema_dist;
 
         // 定期重置相位基准，防止 float 精度长时间退化
         if (++phase_renorm_counter >= (uint32_t)(600.0f * SAMPLE_RATE_HZ)) {
@@ -351,21 +348,28 @@ int acc_example_detector_distance(int argc, char *argv[]) {
           phase_renorm_counter = 0;
         }
 
-        update_phase(&result, &metadata, spf, index,
-                     &prev_angle, &first_phase, &unwrapped_angle);
+        float coherence = 0.0f;
+        update_phase(&result, &metadata, spf, tracked_index,
+                     &prev_angle, &first_phase, &unwrapped_angle, &coherence);
 
-        printf("[LOCK] Dist: %.3fm | Intra: %.1f | Angle: %.2f\n",
-               current_dist, result.intra_presence_score, unwrapped_angle);
+        printf("[LOCK] Dist: %.3fm | Intra: %.1f | Angle: %.2f | Coh: %.0f\n",
+               current_dist, result.intra_presence_score, unwrapped_angle, coherence);
 
         process_vital_signs(unwrapped_angle, current_dist);
-        process_fall_detection(result.intra_presence_score, current_dist);
-      }
-
     } else {
-      if (acc_integration_get_time() % 2000 < 50) {
-        printf("[System] Searching for target...\n");
-      }
+        if (acc_integration_get_time() % 2000 < 50) {
+          printf("[System] Searching for target...\n");
+        }
     }
+
+    // --- 跌倒检测 (全时监测，防止锁相丢失挂起状态机) ---
+    float fall_current_dist = 0.0f;
+    if (det_phase == DET_MEASURING && tracked_index != -1) {
+        fall_current_dist = ema_dist;
+    } else {
+        fall_current_dist = result.presence_distance;
+    }
+    process_fall_detection(result.intra_presence_score, fall_current_dist);
   }
 
   cleanup(presence_handle, presence_config, sensor, buffer);

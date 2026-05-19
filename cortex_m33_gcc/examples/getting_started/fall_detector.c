@@ -13,10 +13,14 @@ app_config_t global_config = {
 };
 
 system_mode_t sys_mode = MODE_NORMAL;
-static uint32_t suspected_frame_cnt = 0;
-static uint32_t impact_frame_cnt = 0;
-static uint32_t alarm_print_counter = 0;
-static float    pre_fall_dist    = 0.0f;
+
+// --- 状态机内部计数器与标志 ---
+static uint32_t suspected_frame_cnt      = 0;
+static uint32_t impact_frame_cnt         = 0;
+static uint32_t alarm_print_counter      = 0;
+static uint32_t resting_frame_cnt        = 0;
+static float    pre_fall_dist            = 0.0f;
+static bool     was_resting_before_impact = false;
 
 void fall_detector_init(void) {
     sys_mode = MODE_NORMAL;
@@ -31,12 +35,9 @@ void fall_detector_reset_alarm(void) {
         impact_frame_cnt = 0;
         suspected_frame_cnt = 0;
         alarm_print_counter = 0;
-        printf("[APP NOTIFY] 跌倒报警已清除。\n");
+        printf("[FALL] Alarm cleared\n");
     }
 }
-
-static uint32_t resting_frame_cnt = 0;
-static bool was_resting_before_impact = false;
 
 void process_fall_detection(float intra_score, float current_dist) {
   if (!global_config.enable_fall_detection) return;
@@ -61,16 +62,18 @@ void process_fall_detection(float intra_score, float current_dist) {
         if (impact_frame_cnt >= (uint32_t)(0.5f * SAMPLE_RATE_HZ)) {
             sys_mode = MODE_SUSPECTED;
             suspected_frame_cnt = 0;
-            printf("\n[APP NOTIFY] ⚠️ 检测到疑似动作爆发！\n");
+            printf("\n[FALL] Suspected impact\n");
         }
       } else {
-        impact_frame_cnt = 0;
+        // 改进：允许短暂单帧掉帧，每次仅递减 2 而非归零
+        impact_frame_cnt = (impact_frame_cnt > 2) ? impact_frame_cnt - 2 : 0;
       }
       break;
 
     case MODE_SUSPECTED:
       // 爆发后的静止确认阶段 (Post-Impact Stillness)
-      if (intra_score < 1.5f) {
+      // 改进：阈值放宽到 5.0f，允许呼吸与微小动作
+      if (intra_score < 5.0f) {
         suspected_frame_cnt++;
         if (suspected_frame_cnt >= (uint32_t)(global_config.confirm_period_sec * SAMPLE_RATE_HZ)) {
           
@@ -82,7 +85,7 @@ void process_fall_detection(float intra_score, float current_dist) {
               if (dist_diff > 0.6f) {
                   sys_mode = MODE_ALARM;
               } else {
-                  printf("[APP NOTIFY] ✅ 误报拦截：原静止状态下的姿态调整 (如翻身、伸懒腰)。\n");
+                  printf("[FALL] Intercepted: Bed movement\n");
                   sys_mode = MODE_NORMAL;
                   // 继承之前的静止状态，防止连续翻身触发
                   resting_frame_cnt = (uint32_t)(5.0f * SAMPLE_RATE_HZ); 
@@ -93,25 +96,27 @@ void process_fall_detection(float intra_score, float current_dist) {
               if (dist_diff > 0.15f) {
                   sys_mode = MODE_ALARM;
               } else {
-                  printf("[APP NOTIFY] ✅ 误报拦截：位置无明显滑移，疑似快速坐下。\n");
+                  printf("[FALL] Intercepted: Sitting down\n");
                   sys_mode = MODE_NORMAL;
                   resting_frame_cnt = 0;
               }
           }
         }
       } else if (intra_score > 10.0f) {
-        printf("[APP NOTIFY] 🏃 运动恢复，警报取消。\n");
+        printf("[FALL] Cancelled: Motion detected\n");
         sys_mode = MODE_NORMAL;
         resting_frame_cnt = 0;
       } else {
-        // 中等幅度运动 (1.5 ~ 10.0)：重置静止计时器，不确认也不取消
-        suspected_frame_cnt = 0;
+        // 改进：中等幅度运动 (5.0 ~ 10.0) 不直接清零，而是每次递减 1，允许短暂微动
+        if (suspected_frame_cnt > 0) {
+            suspected_frame_cnt--;
+        }
       }
       break;
 
     case MODE_ALARM:
       if (alarm_print_counter++ >= (uint32_t)(2.0f * SAMPLE_RATE_HZ)) {
-          printf("\n!!! [CRITICAL] 确认跌倒发生 - 等待救援 !!!\n");
+          printf("\n[CRITICAL] Fall detected!\n");
           alarm_print_counter = 0;
       }
       break;
