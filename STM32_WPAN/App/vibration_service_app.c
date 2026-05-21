@@ -83,8 +83,12 @@ uint8_t a_VIBRATION_SERVICE_UpdateCharData[247];
 
 /* USER CODE BEGIN PV */
 static VIBRATION_Config_t Vibration_Config = {
-    .preset = 0,  /* HIGH_FREQUENCY */
-    .measured_point = 80,
+    .preset                = 0,   /* HIGH_FREQUENCY */
+    .measured_point        = 80,  /* 200 mm from sensor */
+    .hwaas                 = 16,  /* balanced SNR vs. speed; increase to 32-64 for long range */
+    .profile               = 3,   /* balanced pulse profile; increase to 4-5 for long range */
+    .continuous_sweep_mode = 0,   /* OFF — matches HIGH_FREQUENCY preset default */
+    .double_buffering      = 0,   /* OFF — matches HIGH_FREQUENCY preset default */
 };
 /* USER CODE END PV */
 

@@ -117,6 +117,7 @@ bool Radar_Adapter_Init(void) {
  * @return  true if the initialization was successful, false otherwise.
 ***********************************************************************************************************************/
 static bool init_vibration(void) {
+    // Get user configuration for vibration mode
     VIBRATION_Config_t *cfg = VIBRATION_APP_GetConfig();
 
     /* 1. Load preset (HIGH or LOW frequency) */
@@ -126,12 +127,20 @@ static bool init_vibration(void) {
     acc_vibration_preset_set(&ctx.vib_config, preset);
 
     /* 2. Apply user overrides on top of preset */
-    ctx.vib_config.measured_point = cfg->measured_point;
+    ctx.vib_config.measured_point          = cfg->measured_point;
+    ctx.vib_config.hwaas                   = cfg->hwaas;
+    ctx.vib_config.profile                 = (acc_config_profile_t)cfg->profile;
+    ctx.vib_config.continuous_sweep_mode   = (cfg->continuous_sweep_mode != 0);
+    ctx.vib_config.double_buffering        = (cfg->double_buffering != 0);
     ctx.vib_config.reported_displacement_mode = ACC_VIBRATION_REPORT_DISPLACEMENT_AS_AMPLITUDE;
 
-    LOG_INFO_APP("Vibration init: preset=%s, point=%lu\r\n",
+    LOG_INFO_APP("Vibration init: preset=%s, point=%lu, hwaas=%u, profile=%u, csm=%u, db=%u\r\n",
         (preset == ACC_VIBRATION_PRESET_HIGH_FREQUENCY) ? "HIGH" : "LOW",
-        (unsigned long)cfg->measured_point);
+        (unsigned long)cfg->measured_point,
+        (unsigned)cfg->hwaas,
+        (unsigned)cfg->profile,
+        (unsigned)cfg->continuous_sweep_mode,
+        (unsigned)cfg->double_buffering);
 
     ctx.vib_handle = acc_vibration_handle_create(&ctx.vib_config);
     if (!ctx.vib_handle) return false;

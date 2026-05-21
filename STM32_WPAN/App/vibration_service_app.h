@@ -69,8 +69,12 @@ typedef struct __PACKED
 
 typedef struct __PACKED
 {
-  uint8_t  preset;         /* 0: HIGH_FREQUENCY (10-5000 Hz), 1: LOW_FREQUENCY (0.1-100 Hz) */
-  uint32_t measured_point; /* distance index; distance_mm = measured_point * 2.5 */
+  uint8_t  preset;                  /* 0: HIGH_FREQUENCY (10-5000 Hz), 1: LOW_FREQUENCY (0.1-100 Hz) */
+  uint32_t measured_point;          /* distance index; distance_mm = measured_point * 2.5, max 400 (= 1 m) */
+  uint16_t hwaas;                   /* Hardware Accelerated Average Samples, 1-511; each doubling = ~+3 dB SNR, default 16 */
+  uint8_t  profile;                 /* Radar pulse profile, 1-5; higher = longer pulse = better SNR at long range, default 3 */
+  uint8_t  continuous_sweep_mode;   /* 0=OFF, 1=ON; eliminates inter-sweep gaps for accurate FFT timing; pair with double_buffering */
+  uint8_t  double_buffering;        /* 0=OFF, 1=ON; prevents CPU read from stalling sensor; pair with continuous_sweep_mode */
 } VIBRATION_Config_t;
 /* USER CODE END ET */
 
