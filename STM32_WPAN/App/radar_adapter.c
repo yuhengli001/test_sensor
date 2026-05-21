@@ -28,7 +28,7 @@
 #define SENSOR_TIMEOUT_MS (1000U)
 
 #define STABILITY_THRESHOLD 0.5f  /* Hz */
-#define STABILITY_REQUIRED  5     /* Consecutive frames */
+#define STABILITY_REQUIRED  3     /* Consecutive frames */
 #define RADAR_FRAME_RATE    20.0f /* Hz */
 
 typedef enum { DET_SEARCHING, DET_COARSE, DET_MEASURING } det_phase_t;
@@ -323,7 +323,25 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
         if (ctx.vib_handle) {
             acc_vibration_result_t result = {0};
             acc_vibration_process(&proc_result, ctx.vib_handle, &ctx.vib_config, &result);
-            
+
+            /* Throttled raw diagnostic: print once every 20 frames (~1 s) */
+            static uint32_t vib_dbg_counter = 0;
+            vib_dbg_counter++;
+            if (vib_dbg_counter >= 20) {
+                vib_dbg_counter = 0;
+                if (result.peak_count == 0) {
+                    LOG_INFO_APP("[VIB RAW] No peaks (peak_count=0)\r\n");
+                } else {
+                    LOG_INFO_APP("[VIB RAW] peaks=%u  #0: freq=%.2f Hz  disp=%.2f um  stability=%lu/%d  disp_ok=%s\r\n",
+                        (unsigned)result.peak_count,
+                        result.peak_frequencies[0],
+                        result.peak_displacements[0],
+                        (unsigned long)ctx.vib_stability_counter,
+                        STABILITY_REQUIRED,
+                        (result.peak_displacements[0] > 5.0f) ? "YES" : "NO (<5um)");
+                }
+            }
+
             float top_freq = 0;
             float top_disp = 0;
 
