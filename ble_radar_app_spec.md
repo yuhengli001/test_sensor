@@ -81,7 +81,7 @@ These are the instructions the user can send from the app to configure the senso
 #### Mode 3: Vibration Parameters
 
 **User-Controllable (Main UI):**
-*   `preset` (enum): Frequency range preset — **High Frequency** (10–5000 Hz, burst mode) or **Low Frequency** (0.1–100 Hz, continuous mode). Selecting a preset loads all underlying sensor parameters automatically (see locked values below).
+*   `preset` (enum): Frequency range preset — **High Frequency** (10–5000 Hz, burst mode) or **Low Frequency** (1–100 Hz, continuous mode). Selecting a preset loads all underlying sensor parameters automatically (see locked values below).
 *   `measured_point` (int): Distance point index to monitor (default 80). Corresponds to ~`measured_point × 2.5 mm` from the sensor. Maximum value is **400** (= 1000 mm / 1 m).
 *   `displacement_mode` (enum): **Peak-to-Peak** (total travel, recommended — standard in ISO 10816) or **Amplitude** (raw FFT peak, single-sided).
 
