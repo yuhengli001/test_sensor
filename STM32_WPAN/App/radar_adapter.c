@@ -130,11 +130,19 @@ static bool init_vibration(void) {
     ctx.vib_config.measured_point          = cfg->measured_point;
     ctx.vib_config.hwaas                   = cfg->hwaas;
     ctx.vib_config.profile                 = (acc_config_profile_t)cfg->profile;
-    /* OR with preset value: user can turn CSM/DB ON for extra performance,
-     * but cannot accidentally turn them OFF when the preset requires them
-     * (e.g. LOW_FREQUENCY preset needs both enabled for correct FFT timing). */
-    ctx.vib_config.continuous_sweep_mode = ctx.vib_config.continuous_sweep_mode || (cfg->continuous_sweep_mode != 0);
-    ctx.vib_config.double_buffering      = ctx.vib_config.double_buffering      || (cfg->double_buffering != 0);
+    /* CSM and Double Buffering policy:
+     *   LOW_FREQUENCY  — always forced ON; both are required for correct FFT timing
+     *                    and cannot be overridden by the user.
+     *   HIGH_FREQUENCY — fully user-controlled; user may enable them for long-range
+     *                    detection (recommended when measured_point > 200) or leave
+     *                    them OFF for short-range use. */
+    if (preset == ACC_VIBRATION_PRESET_LOW_FREQUENCY) {
+        ctx.vib_config.continuous_sweep_mode = true;
+        ctx.vib_config.double_buffering      = true;
+    } else {
+        ctx.vib_config.continuous_sweep_mode = (cfg->continuous_sweep_mode != 0);
+        ctx.vib_config.double_buffering      = (cfg->double_buffering != 0);
+    }
     ctx.vib_config.reported_displacement_mode = ACC_VIBRATION_REPORT_DISPLACEMENT_AS_AMPLITUDE;
 
     LOG_INFO_APP("Vibration init: preset=%s, point=%lu, hwaas=%u, profile=%u, csm=%u, db=%u\r\n",

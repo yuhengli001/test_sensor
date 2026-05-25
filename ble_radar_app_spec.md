@@ -159,7 +159,80 @@ These four parameters work as a **coordinated group**. They are most relevant wh
 
 ---
 
-## 4. Mobile App Functions & UI Design
+## 4. Vibration Config Write Flow (iOS → MCU)
+
+### When settings are applied
+
+Settings changed in the UI are held in local app state only. They are **not sent to the MCU immediately** when the user moves a slider or picks a value. They are written to the sensor exactly once — at the moment the user taps **START MONITOR**.
+
+### Start sequence (3 BLE writes in order)
+
+```
+User taps START
+      │
+      ├─ 1. Write mode byte → FE41 (Active Mode char, withoutResponse)
+      │        value: 0x03 = Vibration
+      │
+      ├─ 2. Write config → FE71 (Vibration Config char, withResponse, 10 bytes)
+      │        [preset | measuredPoint(4) | hwaas(2) | profile | csm | db]
+      │
+      └─ (200 ms delay)
+           │
+           └─ 3. Write start command → FE42 (System Command char, withoutResponse)
+                    value: 0x01 = START
+```
+
+The 200 ms gap before the START command ensures both the mode byte and config bytes have been received and stored in the MCU before `Radar_Adapter_Start()` is called.
+
+### MCU side (on receiving START command)
+
+```
+FE42 write (0x01) received
+      │
+      └─ Radar_Adapter_Start(RADAR_MODE_VIBRATION)
+               │
+               └─ init_vibration()
+                        │
+                        ├─ acc_vibration_preset_set()   ← loads Acconeer defaults
+                        │
+                        └─ apply user overrides from Vibration_Config
+                                  measured_point   ← hard overwrite
+                                  hwaas            ← hard overwrite
+                                  profile          ← hard overwrite
+                                  csm              ← OR'd (can only turn ON)
+                                  double_buffering ← OR'd (can only turn ON)
+```
+
+### What happens when settings change while running
+
+| Action | Effect |
+|---|---|
+| Move slider / change picker while running | Only local UI state changes — MCU is **not notified** |
+| Tap **STOP SENSOR** | MCU stops; config is **not** sent |
+| Tap **START MONITOR** again | Fresh config is sent, then START — new settings take effect |
+
+**Rule of thumb:** any settings change requires a stop-and-restart cycle to take effect on the sensor.
+
+### CSM and Double Buffering policy (preset-dependent)
+
+These two flags are not simply passed through — they follow a preset-conditional rule in firmware:
+
+```c
+if (preset == LOW_FREQUENCY) {
+    csm = true   // always forced ON — required for correct FFT timing
+    db  = true   // always forced ON — required to pair with CSM
+} else {         // HIGH_FREQUENCY
+    csm = user_csm   // user has full control
+    db  = user_db    // user has full control
+}
+```
+
+- **LOW_FREQUENCY** — CSM and DB are always forced ON regardless of what the app sends. The iOS UI locks both toggles to ON (greyed out) when this preset is selected.
+- **HIGH_FREQUENCY** — CSM and DB are fully user-controlled. They default OFF (short range), but should be enabled together for detection beyond ~500 mm.
+
+---
+
+## 5. Mobile App Functions & UI Design
 How the app will look and behave for the user.
 
 *   **Navigation:** A simple Tab Bar at the bottom (Vital | Fall | Vibrate | Settings) to easily switch contexts.

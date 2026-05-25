@@ -71,7 +71,7 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-static const uint16_t SizeVibration_Config = 10; /* sizeof(VIBRATION_Config_t): 1+4+2+1+1+1 bytes */
+static const uint16_t SizeVibration_Config = 10;
 static const uint16_t SizeVibration_Data = 28;
 static const uint16_t SizeSpectrum_Array = 240;
 

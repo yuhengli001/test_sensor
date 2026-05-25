@@ -635,6 +635,7 @@ void process_vital_signs(float difference, float current_dist) {
 
     float freq_h = tracked_heart_freq;
     float snr_h = power_h_win / (avg_h + 0.000001f);
+    bool h_ok = (snr_h > 2.0f);
 
     float bpm_b = freq_b * 60.0f;
     float bpm_h = freq_h * 60.0f;
