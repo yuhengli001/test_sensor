@@ -49,13 +49,17 @@
 
 ## 1. System Overview
 
-This system is a battery-powered, BLE-connected radar sensing device capable of three operating modes: **vibration monitoring**, **vital sign detection** (breathing and heart rate), and **fall detection**. The device streams processed sensor data to an iOS companion app over Bluetooth Low Energy in real time.
+This project is a **complete, open radar sensing platform** — custom PCB, STM32 firmware, Acconeer RSS integration, BLE GATT stack, and iOS companion app — built so that developers can take the full stack as a foundation and adapt it to their own sensing application with minimal rework.
+
+At the core is the **Acconeer A121**, a 60 GHz pulsed coherent radar sensor in a 29 mm² package — one of the smallest and lowest-power radar sensors available, setting a new benchmark in both dimensions. The A121 is capable of far more than the applications demonstrated here: presence detection, velocity measurement, gesture recognition, material classification, water level sensing, robot navigation, and more can all be built on the same hardware and firmware infrastructure.
+
+The two implemented sensing modes — vibration monitoring and vital signs detection — serve as concrete, end-to-end reference implementations covering the full signal path from raw IQ frames through STM32 processing, BLE streaming, and iOS display. They are designed to be studied, extended, or replaced.
 
 ### Architecture
 
 ![System Architecture Diagram](images/system_architecture.png)
 
-### Operating Modes at a Glance
+### Current Application Modes
 
 | Mode | What it measures | Status |
 |---|---|---|
@@ -68,6 +72,8 @@ This system is a battery-powered, BLE-connected radar sensing device capable of 
 ## 2. Hardware
 
 ### 2.1 Component Overview
+
+The table below covers the key components. Not all passive components, decoupling capacitors, or supporting circuitry are listed — refer to the schematic for the complete BOM.
 
 | Component | Part | Role |
 |---|---|---|
@@ -108,16 +114,18 @@ This system is a battery-powered, BLE-connected radar sensing device capable of 
 | Specification | Value |
 |---|---|
 | Technology | Pulsed Coherent Radar (PCR) |
-| Operating frequency | 60.5 GHz (57 – 64 GHz band) |
-| Maximum range | 20 m |
+| Operating frequency | 57 – 64 GHz |
+| Maximum range | 23 m (water level with lens); up to 7 m human presence detection lens-free |
 | Interface | SPI (up to 50 MHz) |
-| Supply voltage | 1.8 or 3.3V |
-| IO power supply | 1.8 V |
-| Active current | ~75 mA |
-| Sleep current | ~3 mA |
-| Idle current (ENABLE low) | < 1 µA |
+| Supply voltage | 1.8 V |
+| IO power supply | 1.8 V or 3.3 V |
+| Active current (MEASURE) | ~75 mA total at Profile 3 (VDIG 64.6 + VRX 5.9 + VTX 4.9 mA); ~74–78 mA across Profiles 1–5 |
+| Between-sweep: DEEP_SLEEP | ~1.04 mA total (VDIG 922 µA + VIO 43 µA + VRX 34 µA + VTX 39 µA) |
+| Between-sweep: SLEEP | ~1.51 mA total (VDIG 1.35 mA + VIO 43 µA + VRX 56 µA + VTX 60 µA) |
+| Between-sweep: HIBERNATE | ~11.1 µA total (VDIG 11.0 + VIO 0.05 + VRX 0.03 + VTX 0.02 µA) |
+| OFF current (ENABLE low) | ~0.4 µA total (VDIG 0.34 + VTX 0.06 µA; VIO and VRX = 0) |
 | Operating temperature | −40 °C to +105 °C |
-| Package | 50-VFBGA (5.4 × 5.4 mm, 500 µm pitch) |
+| Package | fcCSP50 (5.2 × 5.5 × 0.88 mm, 0.5 mm pitch) |
 
 **Role in this system:** performs all mmWave signal generation and reception. Internally executes hardware-accelerated sweep averaging (HWAAS) before passing IQ data to the STM32 over SPI. Controlled via three GPIO lines from the STM32: **ENABLE** (sensor power gate), **SPI CS/CLK/MOSI/MISO** (data), and **INTERRUPT** (signals frame-ready to STM32).
 
@@ -553,11 +561,23 @@ The FFT is computed over the time series of IQ phase values at `measured_point`.
 | Parameter | Type | Default | Range | Effect |
 |---|---|---|---|---|
 | `preset` | enum | HIGH | HIGH / LOW | Loads the locked parameters below. Must be set first; overrides follow. |
-| `measured_point` | uint32 | 80 | 1 – 400 | Distance index to monitor. Physical distance = `measured_point × 2.5 mm` (point 80 = 200 mm, point 400 = 1000 mm). |
+| `measured_point` | uint32 | 80 | 1 – 400 | Distance index to monitor. Physical distance = `measured_point × 2.5 mm` (point 80 = 200 mm, point 400 = 1000 mm). Sets the **centre** of the detection bin — the target does not need to be at the exact distance; see range bin tolerance note below. |
 | `hwaas` | uint16 | 16 | 8 / 16 / 32 / 64 / 128 / 256 | Hardware-averaged samples per sweep. Each doubling adds ~+3 dB SNR. Use higher values for longer detection distances. |
-| `profile` | uint8 | 3 | 1 – 5 | Radar pulse duration. Higher profile = more energy per sweep = better SNR at range. No spatial resolution penalty in single-point vibration mode. |
+| `profile` | uint8 | 3 | 1 – 5 | Radar pulse duration. Higher profile = longer pulse = better SNR at range. Also widens the range bin — see tolerance note below. |
 | `continuous_sweep_mode` | bool | OFF (HIGH) | ON / OFF | Forces uniform inter-sweep intervals. Required for accurate FFT at low frequencies. Always ON in LOW preset. |
 | `double_buffering` | bool | OFF (HIGH) | ON / OFF | Prevents CPU readout from stalling the sweep stream. Must be paired with CSM. Always ON in LOW preset. |
+
+> **Range bin tolerance.** `measured_point` sets the centre of a range bin whose width is determined by `profile`. The target does not need to be at the exact set distance — it only needs to fall somewhere within the bin. Approximate bin widths per profile (derived from `d_res ≈ c × t_pulse / 2` — verify exact values against the A121 User Guide at developer.acconeer.com):
+<!-- >
+> | Profile | Range bin width (approx.) | Effective tolerance around `measured_point` |
+> |---|---|---|
+> | 1 | ~4 cm | ±2 cm |
+> | 2 | ~7 cm | ±3.5 cm |
+> | 3 | ~12 cm | ±6 cm |
+> | 4 | ~19 cm | ±9.5 cm |
+> | 5 | ~25 cm | ±12.5 cm |
+>
+> An object set at 0.2 m with Profile 3 (default) will be reliably detected anywhere from roughly 0.1 m to 0.3 m without adjusting `measured_point`. This tolerance widens with higher profiles. For multi-object environments, a wider bin also increases the risk of capturing an unintended reflector at a nearby distance. -->
 
 #### Locked / Hardcoded per Preset
 

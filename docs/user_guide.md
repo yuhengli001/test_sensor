@@ -29,9 +29,11 @@
 
 ## 1. What Is This Device?
 
-This is a compact, wireless radar sensor that monitors vibration and vital signs without any physical contact. It connects to your iPhone over Bluetooth and streams real-time measurements to the app.
+This project is a **complete radar sensing platform** — hardware, firmware, and companion app — designed so that developers can take it as a foundation and integrate it into their own specific applications with minimal rework.
 
-**What it can do:**
+The platform is built around the **Acconeer A121**, a 60 GHz mmWave pulsed coherent radar sensor. At just 29 mm² and 0.88 mm tall, it is one of the smallest radar sensors available, while simultaneously setting a new benchmark for low power consumption — making it uniquely suited for battery-powered, embedded applications. mmWave radar is a powerful sensing technology capable of detecting presence, motion, distance, vibration, vital signs, material classification, gesture recognition, and more — all without any physical contact. The two demonstration applications shown in this guide represent only a small slice of what the sensor can do.
+
+**Demonstration applications in this release:**
 
 | Mode | What you will see |
 |---|---|
@@ -39,12 +41,13 @@ This is a compact, wireless radar sensor that monitors vibration and vital signs
 | Vital Signs | Breathing rate and heart rate, measured from a distance |
 | Fall Detection | *(Coming soon)* |
 
-The sensor runs on a built-in rechargeable battery and charges over USB.
+The sensor runs on a built-in rechargeable battery and charges over USB. The BLE interface, firmware architecture, and iOS app are all structured to make it straightforward to add new sensing modes or swap in custom signal processing.
 
 <table>
   <tr>
     <td align="center"><img src="images/IMG_6297.PNG" width="400"/><br><em>(front)</em></td>
     <td align="center"><img src="images/IMG_6298.PNG" width="400"/><br><em>Radar sensor (back)</em></td>
+    <td align="center"><img src="images/case.jpg" width="400"/><br><em>(3d printing case and lens)</em></td>
   </tr>
 </table>
 
@@ -54,11 +57,11 @@ The sensor runs on a built-in rechargeable battery and charges over USB.
 
 ### Power On
 
-Turn the sensor on. The status LED will light up briefly to confirm it is powered.
+The sensor has a slide switch to turn the system on or off, though it is typically left on. Once powered, the hardware boots automatically and starts advertising over Bluetooth.
 
-### Install the App
+<!-- ### Install the App
 
-Install **RadarPro** on your iPhone. The app requires iOS 16 or later and Bluetooth to be enabled.
+Install **RadarPro** on your iPhone. The app requires iOS 16 or later and Bluetooth to be enabled. -->
 
 ### First-Time Connection
 
@@ -67,7 +70,7 @@ Install **RadarPro** on your iPhone. The app requires iOS 16 or later and Blueto
 3. The app scans automatically and connects to the first sensor it finds.
 4. The button changes to **DISCONNECT** once connected — you are ready.
 
-> Keep the sensor within about 5 metres of your phone during setup. Once connected, the Bluetooth link is stable up to typical room distances.
+<!-- > Keep the sensor within about 5 metres of your phone during setup. Once connected, the Bluetooth link is stable up to typical room distances. -->
 
 ---
 
@@ -82,7 +85,7 @@ Use this mode to measure mechanical vibrations on a surface — motors, pipes, m
 3. Tap the **Vibration** tab, connect if not already connected, then tap **START MONITOR**.
 4. Once the sensor is running, **slowly adjust the position of the sensor or the object** — small shifts of a centimetre or two — until the frequency and displacement readings become stable and consistent.
 
-> 💡 **Getting a stable reading is a positioning problem, not a settings problem.** The sensor analyses a single fixed point in space. If that point lands inside the object or just behind it rather than on the surface, the signal will be weak or absent. Small positional adjustments have a large effect — take your time here before changing any other settings.
+> **Getting a stable reading is a positioning problem, not a settings problem.** The sensor analyses a single fixed point in space. If that point lands inside the object or just behind it rather than on the surface, the signal will be weak or absent. Small positional adjustments have a large effect — take your time here before changing any other settings.
 
 ### Sensor Settings
 
@@ -90,8 +93,8 @@ Before starting a measurement, you can adjust the settings in the **SENSOR SETTI
 
 | Setting | What it does |
 |---|---|
-| **Frequency Mode** | **HIGH** — detects 10 to 5000 Hz vibrations (motors, machinery). **LOW** — detects 0.1 to 100 Hz vibrations (slow structural movement, low-speed equipment). |
-| **Detection Range** | The distance from the sensor to the target surface. Slide to match your actual setup — from 0.1 m up to 1.0 m. |
+| **Frequency Mode** | **HIGH** — detects 10 to 5000 Hz vibrations (motors, machinery). **LOW** — detects 1 to 100 Hz vibrations (slow structural movement, low-speed equipment). |
+| **Detection Range** | The distance from the sensor to the target surface. Slide to match your actual setup — from 0.1 m up to 1.0 m. The setting does not need to be exact — the sensor naturally detects within a window around the set distance (roughly ±5–10 cm with the default Pulse Profile 3). |
 | **Pulse Profile** | Controls how much radar energy is sent out. Use higher values (4–5) for targets further away to get a stronger signal. |
 | **HWAAS** | Controls how much internal averaging the radar does per measurement. Higher values improve signal quality at longer distances. Default (16) works well up to about 0.2 m. Use 64 or higher beyond 0.5 m. |
 | **Continuous Sweep** | Keeps the sweep timing perfectly uniform — required for accurate frequency readings. Automatically ON in Low Frequency mode. |
@@ -115,7 +118,6 @@ If the display shows **0.0**, the sensor is not detecting a clear vibration at t
     <td align="center"><img src="images/1.PNG" width="200"/></td>
     <td align="center"><img src="images/2.PNG" width="200"/></td>
     <td align="center"><img src="images/3.PNG" width="200"/></td>
-    <td align="center"><img src="images/4.PNG" width="200"/></td>
   </tr>
 </table>
 
