@@ -270,20 +270,37 @@ __USED void VIBRATION_SERVICE_Spectrum_array_SendNotification(void) /* Property 
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
-void VIBRATION_APP_UpdateData(float freq, float displ, float displ_rms, float vel, float vel_rms, float accel, float accel_rms)
+void VIBRATION_APP_UpdateData(float freq, float displ, float freq2, float displ2)
 {
     VIBRATION_Data_t data;
+
+    /* --- Peak 1: derive all physics from freq + displacement --- */
     data.frequency        = freq;
     data.displacement     = displ;
-    data.displacement_rms = displ_rms;
-    data.velocity         = vel;
-    data.velocity_rms     = vel_rms;
-    data.acceleration     = accel;
-    data.acceleration_rms = accel_rms;
+    if (freq > 0.0f && displ > 0.0f) {
+        float omega           = 2.0f * 3.14159265f * freq;
+        float vel_peak        = (displ * omega) / 1e3f;   /* mm/s */
+        float accel_peak      = (displ * omega * omega) / 1e6f; /* m/s^2 */
+        data.displacement_rms = displ    / 1.41421356f;
+        data.velocity         = vel_peak;
+        data.velocity_rms     = vel_peak / 1.41421356f;
+        data.acceleration     = accel_peak;
+        data.acceleration_rms = accel_peak / 1.41421356f;
+    } else {
+        data.displacement_rms = 0.0f;
+        data.velocity         = 0.0f;
+        data.velocity_rms     = 0.0f;
+        data.acceleration     = 0.0f;
+        data.acceleration_rms = 0.0f;
+    }
+
+    /* --- Peak 2: just store freq + displacement --- */
+    data.frequency2    = freq2;
+    data.displacement2 = displ2;
 
     VIBRATION_SERVICE_Data_t ble_data;
     ble_data.p_Payload = (uint8_t*)&data;
-    ble_data.Length = sizeof(VIBRATION_Data_t);
+    ble_data.Length    = sizeof(VIBRATION_Data_t);
 
     if (VIBRATION_SERVICE_APP_Context.Vibration_data_Notification_Status == Vibration_data_NOTIFICATION_ON)
     {

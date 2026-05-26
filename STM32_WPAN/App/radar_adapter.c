@@ -44,9 +44,14 @@ typedef struct {
     /* --- Vibration State --- */
     acc_vibration_handle_t   *vib_handle;
     acc_vibration_config_t    vib_config;
+    /* Peak 1 stability */
     float                     vib_prev_freq;
     uint32_t                  vib_stability_counter;
     bool                      vib_was_stable;
+    /* Peak 2 stability */
+    float                     vib_prev_freq2;
+    uint32_t                  vib_stability_counter2;
+    bool                      vib_was_stable2;
 
     /* --- Presence (Vital/Fall) State --- */
     acc_detector_presence_handle_t *presence_handle;
@@ -340,59 +345,130 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
                 if (result.peak_count == 0) {
                     LOG_INFO_APP("[VIB RAW] No peaks (peak_count=0)\r\n");
                 } else {
-                    LOG_INFO_APP("[VIB RAW] peaks=%u  #0: freq=%.2f Hz  disp=%.2f um  stability=%lu/%d  disp_ok=%s\r\n",
+                    LOG_INFO_APP("[VIB RAW] peaks=%u  "
+                                 "tracked1=%.2f Hz stab=%lu  "
+                                 "tracked2=%.2f Hz stab=%lu  "
+                                 "| raw[0]=%.2f Hz  raw[1]=%.2f Hz\r\n",
                         (unsigned)result.peak_count,
+                        ctx.vib_prev_freq,  (unsigned long)ctx.vib_stability_counter,
+                        ctx.vib_prev_freq2, (unsigned long)ctx.vib_stability_counter2,
                         result.peak_frequencies[0],
-                        result.peak_displacements[0],
-                        (unsigned long)ctx.vib_stability_counter,
-                        STABILITY_REQUIRED,
-                        (result.peak_displacements[0] > 5.0f) ? "YES" : "NO (<5um)");
+                        (result.peak_count > 1) ? result.peak_frequencies[1] : 0.0f);
                 }
             }
 
-            float top_freq = 0;
-            float top_disp = 0;
+            float top_freq  = 0.0f;
+            float top_disp  = 0.0f;
+            float top_freq2 = 0.0f;
+            float top_disp2 = 0.0f;
 
+            /* ---- Peak 1: frequency-proximity tracking ----
+             * The Acconeer API sorts peaks by displacement amplitude, so the
+             * same physical frequency can appear at different array indices
+             * as the fork decays.  We track by proximity to the last known
+             * frequency instead of always taking index 0. */
             if (result.peak_count > 0) {
-                float current_freq = result.peak_frequencies[0];
-                float current_disp = result.peak_displacements[0];
-
-                /* Check stability: Is this frequency close to the last one? */
-                if (fabsf(current_freq - ctx.vib_prev_freq) < STABILITY_THRESHOLD) {
-                    ctx.vib_stability_counter++;
-                } else {
-                    ctx.vib_stability_counter = 0;
+                /* Find the peak closest to our last known frequency */
+                uint8_t idx1 = 0;
+                if (ctx.vib_prev_freq > 0.0f) {
+                    float best_dist = 1e9f;
+                    for (uint8_t i = 0; i < result.peak_count; i++) {
+                        float d = fabsf(result.peak_frequencies[i] - ctx.vib_prev_freq);
+                        if (d < best_dist) { best_dist = d; idx1 = i; }
+                    }
+                    /* If nothing within 10 Hz, a new dominant source appeared –
+                     * fall back to the highest-amplitude peak and restart. */
+                    if (best_dist > 10.0f) {
+                        idx1 = 0;
+                        ctx.vib_stability_counter = 0;
+                    }
                 }
-                ctx.vib_prev_freq = current_freq;
 
-                /* Only report if stable for N frames and above displacement threshold */
-                if (ctx.vib_stability_counter >= STABILITY_REQUIRED && current_disp > 5.0f) {
-                    top_freq = current_freq;
-                    top_disp = current_disp;
+                float f1 = result.peak_frequencies[idx1];
+                float d1 = result.peak_displacements[idx1];
 
-                    float omega        = 2.0f * (float)M_PI * top_freq;
-                    float velocity     = (top_disp * omega) / 1e3f;
-                    float acceleration = (top_disp * omega * omega) / 1e6f;
-                    float disp_rms     = top_disp  / (float)M_SQRT2;
-                    float vel_rms      = velocity   / (float)M_SQRT2;
-                    float accel_rms    = acceleration / (float)M_SQRT2;
+                if (fabsf(f1 - ctx.vib_prev_freq) < STABILITY_THRESHOLD)
+                    ctx.vib_stability_counter++;
+                else
+                    ctx.vib_stability_counter = 0;
+                ctx.vib_prev_freq = f1;
 
-                    LOG_INFO_APP("[FILTERED VIB] Freq=%.2f Hz Disp=%.2f um Vel=%.2f mm/s Accel=%.2f m/s^2\r\n",
-                                 top_freq, top_disp, velocity, acceleration);
-
-                    VIBRATION_APP_UpdateData(top_freq, top_disp, disp_rms, velocity, vel_rms, acceleration, accel_rms);
-                    ctx.vib_was_stable = true;
-                } else if (ctx.vib_was_stable) {
-                    /* Vibration just stopped or became unstable - send one '0' update to clear the app */
-                    VIBRATION_APP_UpdateData(0, 0, 0, 0, 0, 0, 0);
-                    ctx.vib_was_stable = false;
+                if (ctx.vib_stability_counter >= STABILITY_REQUIRED && d1 > 5.0f) {
+                    top_freq = f1;
+                    top_disp = d1;
                 }
             } else {
                 ctx.vib_stability_counter = 0;
-                if (ctx.vib_was_stable) {
-                    VIBRATION_APP_UpdateData(0, 0, 0, 0, 0, 0, 0);
-                    ctx.vib_was_stable = false;
+            }
+
+            /* ---- Peak 2: search ALL peaks for the best independent candidate ----
+             * Picks the highest-displacement peak that is:
+             *   (a) not within 10 Hz of peak 1 (avoids same-source duplicates), and
+             *   (b) not a near-integer harmonic of peak 1.
+             * Uses the same proximity tracking to survive amplitude-rank swaps. */
+            if (top_freq > 0.0f && result.peak_count > 1) {
+                /* Find highest-amplitude peak that isn't peak 1 */
+                int    idx2   = -1;
+                float  best_d = 0.0f;
+                for (uint8_t i = 0; i < result.peak_count; i++) {
+                    if (fabsf(result.peak_frequencies[i] - top_freq) < 10.0f) continue;
+                    if (result.peak_displacements[i] > best_d) {
+                        best_d = result.peak_displacements[i];
+                        idx2   = i;
+                    }
                 }
+
+                if (idx2 >= 0) {
+                    float f2 = result.peak_frequencies[idx2];
+                    float d2 = result.peak_displacements[idx2];
+
+                    /* Harmonic rejection: discard if f2 ≈ N×f1 for integer N (±5 %) */
+                    float ratio   = f2 / top_freq;
+                    float nearest = roundf(ratio);
+                    bool  is_harmonic = (nearest >= 1.0f &&
+                                         fabsf(ratio - nearest) < 0.05f * nearest);
+
+                    if (!is_harmonic) {
+                        /* Reset peak-2 tracker if the candidate jumped more than 10 Hz */
+                        if (ctx.vib_prev_freq2 > 0.0f &&
+                            fabsf(f2 - ctx.vib_prev_freq2) > 10.0f) {
+                            ctx.vib_stability_counter2 = 0;
+                        }
+                        if (fabsf(f2 - ctx.vib_prev_freq2) < STABILITY_THRESHOLD)
+                            ctx.vib_stability_counter2++;
+                        else
+                            ctx.vib_stability_counter2 = 0;
+                        ctx.vib_prev_freq2 = f2;
+
+                        if (ctx.vib_stability_counter2 >= STABILITY_REQUIRED && d2 > 5.0f) {
+                            top_freq2 = f2;
+                            top_disp2 = d2;
+                        }
+                    } else {
+                        ctx.vib_stability_counter2 = 0;
+                        ctx.vib_prev_freq2 = 0.0f;
+                    }
+                } else {
+                    /* No independent second peak found this frame */
+                    ctx.vib_stability_counter2 = 0;
+                }
+            } else {
+                ctx.vib_stability_counter2 = 0;
+            }
+
+            /* ---- Emit BLE update ---- */
+            bool any_stable = (top_freq > 0.0f);
+            if (any_stable) {
+                LOG_INFO_APP("[FILTERED VIB] Peak1=%.2f Hz / %.2f um  Peak2=%.2f Hz / %.2f um\r\n",
+                             top_freq, top_disp, top_freq2, top_disp2);
+                VIBRATION_APP_UpdateData(top_freq, top_disp, top_freq2, top_disp2);
+                ctx.vib_was_stable  = true;
+                ctx.vib_was_stable2 = (top_freq2 > 0.0f);
+            } else if (ctx.vib_was_stable || ctx.vib_was_stable2) {
+                /* All peaks gone – send a single zero-clear frame */
+                VIBRATION_APP_UpdateData(0.0f, 0.0f, 0.0f, 0.0f);
+                ctx.vib_was_stable  = false;
+                ctx.vib_was_stable2 = false;
             }
         }
     } else if (mode == RADAR_MODE_VITAL || mode == RADAR_MODE_FALL) {
@@ -561,9 +637,12 @@ void Radar_Adapter_Stop(void) {
     if (ctx.processing) { acc_processing_destroy(ctx.processing); ctx.processing = NULL; }
     if (ctx.buffer) { acc_integration_mem_free(ctx.buffer); ctx.buffer = NULL; }
     
-    ctx.vib_stability_counter = 0;
-    ctx.vib_prev_freq = 0.0f;
-    ctx.vib_was_stable = false;
+    ctx.vib_stability_counter  = 0;
+    ctx.vib_prev_freq          = 0.0f;
+    ctx.vib_was_stable         = false;
+    ctx.vib_stability_counter2 = 0;
+    ctx.vib_prev_freq2         = 0.0f;
+    ctx.vib_was_stable2        = false;
     
     /* --- Mode-Specific Handle Destruction --- */
     if (ctx.vib_handle) { acc_vibration_handle_destroy(ctx.vib_handle); ctx.vib_handle = NULL; }
