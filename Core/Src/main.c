@@ -83,17 +83,20 @@ static void MX_GPDMA1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// Send printf to uart1
-int _write(int fd, char* ptr, int len) {
+// Redirect printf output to USART1
+int _write(int fd, char *ptr, int len)
+{
   HAL_StatusTypeDef hstatus;
 
-  if (fd == 1 || fd == 2) {
-    hstatus = HAL_UART_Transmit(&huart1, (uint8_t *) ptr, len, HAL_MAX_DELAY);
+  if (fd == 1 || fd == 2)
+  {
+    hstatus = HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
     if (hstatus == HAL_OK)
+    {
       return len;
-    else
-      return -1;
+    }
   }
+
   return -1;
 }
 /* USER CODE END 0 */
@@ -142,11 +145,10 @@ int main(void)
   MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
   acc_example_detector_distance(0, NULL);
-  // acc_example_bring_up(0, NULL);
-  // acc_example_vibration_main(0, NULL);
 
-  if (!Radar_Sensor_PreInit()) {
-      LOG_INFO_APP("Radar Pre-Init Failed!\n");
+  if (!Radar_Sensor_PreInit())
+  {
+    LOG_INFO_APP("Radar pre-init failed\n");
   }
 
   /* USER CODE END 2 */
@@ -156,29 +158,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  // RTC_TimeTypeDef sTime;
-  // RTC_DateTypeDef sDate;
   while (1)
   {
-    // /* RTC using LSE*/
-    // // 1. Get the time
-    // HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-    // // 2. Get the date (REQUIRED to unlock the registers)
-    // HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-
-    // // 3. Print to UART
-    // printf("%02d:%02d:%02d\r\n", sTime.Hours, sTime.Minutes, sTime.Seconds);
-
-    // HAL_Delay(1000);
-
-
-    // // Check if HSE is stable and ready
-    // if (LL_RCC_HSE_IsReady()) {
-    //     // HSE is working
-    // } else {
-    //     // HSE failed to start or stabilize
-    // }
-    
     /* USER CODE END WHILE */
     MX_APPE_Process();
 
