@@ -21,6 +21,10 @@ typedef enum {
     RADAR_PARAM_NUM_FRAMES       = 0x0B,
     RADAR_PARAM_FIXED_AMP_THR    = 0x0C,
     RADAR_PARAM_FIXED_STR_THR    = 0x0D,
+    RADAR_PARAM_TRACK_MIN_DIST   = 0x0E,
+    RADAR_PARAM_TRACK_MAX_DIST   = 0x0F,
+    RADAR_PARAM_TRACK_STRENGTH   = 0x10,
+    RADAR_PARAM_TRACK_GATE       = 0x11,
 } radar_param_id_t;
 
 /**
@@ -52,6 +56,14 @@ bool Radar_Sensor_Start(void);
  * @retval true if successful
  */
 bool Radar_Sensor_Get_Next_Results(float *distances_m, float *strengths_db, uint8_t *num_targets);
+
+/**
+ * @brief Get whether a target is currently locked.
+ * @param distance_m Pointer to store tracked distance
+ * @param strength_db Pointer to store tracked strength
+ * @retval true if a target is locked
+ */
+bool Radar_Sensor_Get_Tracked_State(float *distance_m, float *strength_db);
 
 /**
  * @brief Stop the physical sensor and free temporary resources.

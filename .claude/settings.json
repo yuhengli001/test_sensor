@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(ls \"$env:CUBE_BUNDLE_PATH\\\\programmer\\\\2.22.0+st.1\\\\bin\")",
+      "PowerShell($prog = \"$env:CUBE_BUNDLE_PATH\\\\programmer\\\\2.22.0+st.1\\\\bin\\\\STM32_Programmer_CLI.exe\"; & $prog -c port=SWD -w \"d:\\\\test_sensor\\\\build\\\\Debug\\\\test_sensor.elf\" -v -rst)"
+    ]
+  }
+}

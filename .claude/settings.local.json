@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "PowerShell(Get-ChildItem \"D:\\\\STMcubeIDE\\\\STM32CubeIDE_1.19.0\\\\\" | ForEach-Object { $_.Name })",
-      "PowerShell(Get-ChildItem \"D:\\\\STMcubeIDE\\\\STM32CubeIDE_1.19.0\\\\STM32CubeIDE\\\\plugins\\\\com.st.stm32cube.ide.mcu.externaltools.make.win32_2.2.0.202409170845\\\\tools\\\\bin\" | ForEach-Object { $_.Name }; Get-ChildItem \"D:\\\\STMcubeIDE\\\\STM32CubeIDE_1.19.0\\\\STM32CubeIDE\\\\plugins\" | Where-Object { $_.Name -match \"programmer|stlink|cubeprog\" } | ForEach-Object { $_.Name })"
+      "PowerShell(Get-ChildItem \"D:\\\\STMcubeIDE\\\\STM32CubeIDE_1.19.0\\\\STM32CubeIDE\\\\plugins\\\\com.st.stm32cube.ide.mcu.externaltools.make.win32_2.2.0.202409170845\\\\tools\\\\bin\" | ForEach-Object { $_.Name }; Get-ChildItem \"D:\\\\STMcubeIDE\\\\STM32CubeIDE_1.19.0\\\\STM32CubeIDE\\\\plugins\" | Where-Object { $_.Name -match \"programmer|stlink|cubeprog\" } | ForEach-Object { $_.Name })",
+      "PowerShell(ls \"$env:CUBE_BUNDLE_PATH\\\\programmer\")"
     ]
   }
 }
