@@ -46,4 +46,19 @@ void fall_detector_reset_alarm(void);
 fall_status_t process_fall_detection(float intra_score, float current_dist);
 
 
+// -------------------------------------------------------------------------
+// Shared output state — written by the presence detector step function,
+// read by the BLE notification layer to build the outgoing packet.
+// -------------------------------------------------------------------------
+
+/** Current fall detection state. Updated every frame by process_fall_detection(). */
+extern fall_status_t g_fall_status;
+
+/** Latest smoothed subject distance in metres. Valid only when g_presence_valid is true. */
+extern float g_presence_dist;
+
+/** True once the presence detector has acquired a target lock and g_presence_dist is valid. */
+extern bool g_presence_valid;
+
+
 #endif // FALL_DETECTOR_H_

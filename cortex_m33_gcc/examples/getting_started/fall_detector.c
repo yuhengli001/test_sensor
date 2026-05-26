@@ -35,6 +35,11 @@ app_config_t global_config = {
 
 system_mode_t sys_mode = MODE_NORMAL;
 
+// Shared output state (see fall_detector.h for documentation)
+fall_status_t g_fall_status    = FALL_STATUS_NORMAL;
+float         g_presence_dist  = 0.0f;
+bool          g_presence_valid = false;
+
 // --- MODE_NORMAL state ---
 static uint32_t impact_frame_cnt          = 0;
 static uint32_t resting_frame_cnt         = 0;

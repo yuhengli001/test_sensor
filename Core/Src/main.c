@@ -144,11 +144,9 @@ int main(void)
   MX_RNG_Init();
   MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
-  acc_example_detector_distance(0, NULL);
-
-  if (!Radar_Sensor_PreInit())
+  if (acc_example_detector_distance_init() != EXIT_SUCCESS)
   {
-    LOG_INFO_APP("Radar pre-init failed\n");
+    LOG_INFO_APP("Radar presence detector init failed\n");
   }
 
   /* USER CODE END 2 */
@@ -161,6 +159,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+    acc_example_detector_distance_step();
     MX_APPE_Process();
 
   }

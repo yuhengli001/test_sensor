@@ -20,6 +20,7 @@
 
 /* USER CODE BEGIN Includes */
 #include "radar_sensor.h"
+#include "fall_detector.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -75,17 +76,11 @@ void RADAR_SERVER_Notification(RADAR_SERVER_NotificationEvt_t *p_Notification)
 
 			if (cmd == 0x02)
 			{
-				// Action command: 0x02 0x01 = start, 0x02 0x00 = stop
-				if (p_Notification->DataTransfered.p_Payload[1] == 0x01)
-				{
-					LOG_INFO_APP("-- RADAR APP : start command received\n");
-					Radar_Sensor_Start();
-				}
-				else
-				{
-					LOG_INFO_APP("-- RADAR APP : stop command received\n");
-					Radar_Sensor_Stop();
-				}
+				// 0x02 start/stop command is reserved for the distance detector.
+				// The presence detector (phase mode) runs continuously in the main loop
+				// and cannot be started or stopped via this command.
+				// Silently ignore to prevent a hardware conflict with the active sensor.
+				LOG_INFO_APP("-- RADAR APP : 0x02 command ignored (presence detector active)\n");
 			}
 			else if (cmd == 0x03 && p_Notification->DataTransfered.Length >= 6)
 			{
@@ -161,38 +156,33 @@ __USED void RADAR_SERVER_A121_data_SendNotification(void)
 		return;
 	}
 
-	float   distances[5];
-	float   strengths[5];
-	uint8_t num_targets = 0;
-
-	if (!Radar_Sensor_Get_Next_Results(distances, strengths, &num_targets))
+	if (!g_presence_valid)
 	{
 		return;
 	}
 
-	// Build BLE payload: [0x01][num_targets][dist0: 4B][str0: 4B]...
+	// BLE payload format (7 bytes):
+	//   [0]    0x01 — packet type: presence detector data
+	//   [1]    0x01 — num_targets (presence detector tracks one subject)
+	//   [2..5] subject distance in metres, IEEE-754 float, little-endian
+	//   [6]    fall status: 1=normal, 2=impact, 3=suspected, 4=ALARM
 	RADAR_SERVER_Data_t notification_data;
 	notification_data.p_Payload = (uint8_t *)a_RADAR_SERVER_UpdateCharData;
 
 	a_RADAR_SERVER_UpdateCharData[0] = 0x01;
-	a_RADAR_SERVER_UpdateCharData[1] = num_targets;
+	a_RADAR_SERVER_UpdateCharData[1] = 0x01;
+	memcpy(&a_RADAR_SERVER_UpdateCharData[2], &g_presence_dist, 4);
+	a_RADAR_SERVER_UpdateCharData[6] = (uint8_t)g_fall_status;
 
-	uint8_t offset = 2;
-	for (uint8_t i = 0; i < num_targets && i < 2; i++)
-	{
-		memcpy(&a_RADAR_SERVER_UpdateCharData[offset], &distances[i], 4);
-		offset += 4;
-		memcpy(&a_RADAR_SERVER_UpdateCharData[offset], &strengths[i], 4);
-		offset += 4;
-	}
-
-	notification_data.Length = offset;
+	notification_data.Length = 7;
 	RADAR_SERVER_UpdateValue(RADAR_SERVER_A121_DATA, &notification_data);
 
-	if (num_targets > 0)
-	{
-		LOG_INFO_APP("Radar: %d target(s), nearest=%.4f m\n", num_targets, distances[0]);
-	}
+	LOG_INFO_APP("BLE TX: dist=%.3f m | fall=%d (%s)\n",
+	             g_presence_dist,
+	             (int)g_fall_status,
+	             g_fall_status == FALL_STATUS_ALARM     ? "ALARM"     :
+	             g_fall_status == FALL_STATUS_SUSPECTED ? "SUSPECTED" :
+	             g_fall_status == FALL_STATUS_IMPACT    ? "IMPACT"    : "normal");
 }
 
 
