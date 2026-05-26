@@ -2,6 +2,51 @@
 
 ---
 
+## Table of Contents
+
+1. [System Overview](#1-system-overview)
+2. [Hardware](#2-hardware)
+   - [2.1 Component Overview](#21-component-overview)
+   - [2.2 STM32WBA64](#22-stm32wba64)
+   - [2.3 Acconeer A121](#23-acconeer-a121)
+   - [2.4 Power System](#24-power-system)
+   - [2.5 PCB Layout](#25-pcb-layout)
+   - [2.6 Debug Interface](#26-debug-interface)
+3. [Firmware Architecture](#3-firmware-architecture)
+   - [3.1 Source File Map](#31-source-file-map)
+   - [3.2 UTIL_SEQ Cooperative Scheduler](#32-util_seq-cooperative-scheduler)
+   - [3.3 Boot Sequence](#33-boot-sequence)
+   - [3.4 State Variables](#34-state-variables)
+4. [BLE Protocol](#4-ble-protocol)
+   - [4.1 Service Overview](#41-service-overview)
+   - [4.2 Control Service — FE40](#42-control-service--fe40)
+   - [4.3 Vibration Service — FE70](#43-vibration-service--fe70)
+   - [4.4 Vital Sign Service — FE50](#44-vital-sign-service--fe50)
+   - [4.5 Start Sequence](#45-start-sequence)
+   - [4.6 Notification Subscription](#46-notification-subscription)
+   - [4.7 Current iOS App Implementation Status](#47-current-ios-app-implementation-status)
+5. [Vibration Mode — Technical Reference](#5-vibration-mode--technical-reference)
+   - [5.1 Signal Hierarchy: Pulse → Sweep → Frame](#51-signal-hierarchy-pulse--sweep--frame)
+   - [5.2 Configuration Parameters](#52-configuration-parameters)
+   - [5.3 Initialisation Sequence](#53-initialisation-sequence)
+   - [5.4 Per-Frame Processing Loop](#54-per-frame-processing-loop)
+   - [5.5 Signal Processing Algorithm](#55-signal-processing-algorithm)
+   - [5.6 Post-Processing: Stability Filter and Output Gate](#56-post-processing-stability-filter-and-output-gate)
+   - [5.7 Timing Summary](#57-timing-summary)
+   - [5.8 Full Code Flow Reference](#58-full-code-flow-reference)
+6. [Vital Signs Mode](#6-vital-signs-mode)
+7. [Fall Detection Mode](#7-fall-detection-mode)
+8. [iOS App](#8-ios-app)
+   - [8.1 Project File Structure](#81-project-file-structure)
+   - [8.2 RadarBLEManager](#82-radarbemanager)
+   - [8.3 Data Models — RadarModels.swift](#83-data-models--radarmodelsswift)
+   - [8.4 Vibration Dashboard — VibrationDashboard.swift](#84-vibration-dashboard--vibrationdashboardswift)
+   - [8.5 Vital Signs Dashboard — VitalDashboard.swift](#85-vital-signs-dashboard--vitaldashboardswift)
+   - [8.6 Fall Detection Dashboard](#86-fall-detection-dashboard)
+   - [8.7 Shared UI Components](#87-shared-ui-components)
+
+---
+
 ## 1. System Overview
 
 This system is a battery-powered, BLE-connected radar sensing device capable of three operating modes: **vibration monitoring**, **vital sign detection** (breathing and heart rate), and **fall detection**. The device streams processed sensor data to an iOS companion app over Bluetooth Low Energy in real time.

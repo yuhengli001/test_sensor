@@ -2,6 +2,31 @@
 
 ---
 
+## Table of Contents
+
+1. [What Is This Device?](#1-what-is-this-device)
+2. [Getting Started](#2-getting-started)
+   - [Power On](#power-on)
+   - [Install the App](#install-the-app)
+   - [First-Time Connection](#first-time-connection)
+3. [Vibration Monitoring](#3-vibration-monitoring)
+   - [Setting Up](#setting-up)
+   - [Sensor Settings](#sensor-settings)
+   - [Reading the Results](#reading-the-results)
+   - [Starting and Stopping](#starting-and-stopping)
+4. [Vital Signs Monitoring](#4-vital-signs-monitoring)
+   - [Setting Up](#setting-up-1)
+   - [Reading the Results](#reading-the-results-1)
+   - [Tips for Better Readings](#tips-for-better-readings)
+5. [Fall Detection](#5-fall-detection)
+6. [Tips and Best Practices](#6-tips-and-best-practices)
+   - [Vibration Measurements](#vibration-measurements)
+   - [Vital Signs Measurements](#vital-signs-measurements)
+   - [General](#general)
+7. [Troubleshooting](#7-troubleshooting)
+
+---
+
 ## 1. What Is This Device?
 
 This is a compact, wireless radar sensor that monitors vibration and vital signs without any physical contact. It connects to your iPhone over Bluetooth and streams real-time measurements to the app.
@@ -42,7 +67,7 @@ Install **RadarPro** on your iPhone. The app requires iOS 16 or later and Blueto
 3. The app scans automatically and connects to the first sensor it finds.
 4. The button changes to **DISCONNECT** once connected — you are ready.
 
-> 💡 Keep the sensor within about 5 metres of your phone during setup. Once connected, the Bluetooth link is stable up to typical room distances.
+> Keep the sensor within about 5 metres of your phone during setup. Once connected, the Bluetooth link is stable up to typical room distances.
 
 ---
 
@@ -52,9 +77,12 @@ Use this mode to measure mechanical vibrations on a surface — motors, pipes, m
 
 ### Setting Up
 
-1. Place or aim the sensor so it faces the surface you want to measure.
-2. Tap the **Vibration** tab.
-3. Connect if not already connected.
+1. Place the sensor so it faces the surface you want to measure and measure the distance between them.
+2. Set the **Detection Range** slider in the app to match that distance before starting.
+3. Tap the **Vibration** tab, connect if not already connected, then tap **START MONITOR**.
+4. Once the sensor is running, **slowly adjust the position of the sensor or the object** — small shifts of a centimetre or two — until the frequency and displacement readings become stable and consistent.
+
+> 💡 **Getting a stable reading is a positioning problem, not a settings problem.** The sensor analyses a single fixed point in space. If that point lands inside the object or just behind it rather than on the surface, the signal will be weak or absent. Small positional adjustments have a large effect — take your time here before changing any other settings.
 
 ### Sensor Settings
 
@@ -69,7 +97,7 @@ Before starting a measurement, you can adjust the settings in the **SENSOR SETTI
 | **Continuous Sweep** | Keeps the sweep timing perfectly uniform — required for accurate frequency readings. Automatically ON in Low Frequency mode. |
 | **Double Buffering** | Prevents any gaps in the data stream. Must be used together with Continuous Sweep. Automatically ON in Low Frequency mode. |
 
-> 💡 **For targets beyond 0.5 m:** set HWAAS to 64 or higher, Pulse Profile to 4 or 5, and turn on both Continuous Sweep and Double Buffering together. These four settings work as a group to maintain signal quality at longer range.
+> **For targets beyond 0.5 m:** set HWAAS to 64 or higher, Pulse Profile to 4 or 5, and turn on both Continuous Sweep and Double Buffering together. These four settings work as a group to maintain signal quality at longer range.
 
 ### Reading the Results
 
@@ -87,6 +115,7 @@ If the display shows **0.0**, the sensor is not detecting a clear vibration at t
     <td align="center"><img src="images/1.PNG" width="200"/></td>
     <td align="center"><img src="images/2.PNG" width="200"/></td>
     <td align="center"><img src="images/3.PNG" width="200"/></td>
+    <td align="center"><img src="images/4.PNG" width="200"/></td>
   </tr>
 </table>
 
@@ -122,7 +151,7 @@ Use this mode to measure breathing rate and heart rate from a distance — no co
   </tr>
 </table>
 
-> ⚠️ **This device is not a medical instrument.** The vital sign readings are for general monitoring and research purposes only. Do not use them for clinical diagnosis or medical decisions.
+> **This device is not a medical instrument.** The vital sign readings are for general monitoring and research purposes only. Do not use them for clinical diagnosis or medical decisions.
 
 ### Tips for Better Readings
 
@@ -134,7 +163,7 @@ Use this mode to measure breathing rate and heart rate from a distance — no co
 
 ## 5. Fall Detection
 
-> 🚧 **This feature is under development** and will be available in a future update. The Fall Detection tab currently shows a placeholder screen.
+> **This feature is under development** and will be available in a future update. The Fall Detection tab currently shows a placeholder screen.
 
 ---
 
@@ -162,14 +191,6 @@ Use this mode to measure breathing rate and heart rate from a distance — no co
 
 ## 7. Troubleshooting
 
-| Problem | What to try |
-|---|---|
-| App cannot find the sensor | Make sure Bluetooth is enabled on your iPhone. Ensure the sensor is powered on. Move the phone closer to the sensor and tap CONNECT again. |
-| CONNECT button shows "Scanning..." but never connects | The sensor name must contain "test_sensor". Check the sensor is on. Restart Bluetooth on your phone if needed. |
-| Vibration display shows 0.0 after starting | Verify the Detection Range slider matches the actual distance to the target. Increase HWAAS (try 64) and Pulse Profile (try 4–5). Check that the surface is actually vibrating at a measurable amplitude. |
-| Readings are unstable or flickering | The stability filter requires 3 consistent frames before reporting. Some flickering is normal when vibration is at the threshold. Try increasing HWAAS to improve signal quality. |
-| Vital sign readings do not appear | Make sure the subject is within 0.5–2.5 m and facing the sensor. Reduce motion in the room. Allow 15 seconds for the algorithm to stabilise. |
-| Sensor seems unresponsive after STOP | The STOP command can take up to one frame period (~100 ms) to take effect. If the sensor appears stuck, disconnect from the app — this halts all sensor activity immediately. |
-| Settings change did not take effect | Settings are sent to the sensor only when you tap START. Stop the measurement, adjust the setting, then tap START again. |
+*(To be filled in)*
 
 ---
