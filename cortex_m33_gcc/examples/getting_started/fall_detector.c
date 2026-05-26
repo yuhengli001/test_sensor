@@ -9,6 +9,10 @@
 #include "acc_definitions_a121.h"
 #include "acc_integration_log.h"
 
+#include "main.h"
+#include "fall_service_app.h"
+
+
 
 app_config_t global_config = {
 	// Impact detection sensitivity.
@@ -54,6 +58,12 @@ static uint32_t suspected_total   = 0;
 // --- MODE_ALARM state ---
 static uint32_t alarm_print_counter = 0;
 
+// --- BLE notification throttle ---
+// Send immediately on state change; otherwise send once per second to refresh distance.
+#define BLE_PERIODIC_FRAMES  ((uint32_t)SAMPLE_RATE_HZ)   // 1 Hz
+static uint8_t  prev_ble_status    = 0xFF;                 // 0xFF = uninitialised; forces first send
+static uint32_t ble_update_counter = 0;
+
 // Internal thresholds for MODE_SUSPECTED.
 // These are less likely to need tuning than global_config, but can be adjusted here.
 
@@ -91,6 +101,8 @@ void fall_detector_init(void)
 	strong_motion_cnt    = 0;
 	suspected_total      = 0;
 	alarm_print_counter  = 0;
+	prev_ble_status      = 0xFF; // Force a notification on the very first frame
+	ble_update_counter   = 0;
 }
 
 
@@ -105,6 +117,8 @@ void fall_detector_reset_alarm(void)
 		strong_motion_cnt   = 0;
 		suspected_total     = 0;
 		alarm_print_counter = 0;
+		prev_ble_status     = 0xFF; // Force a notification on the next frame after reset
+		ble_update_counter  = 0;
 		printf("[FALL] Alarm cleared\n");
 	}
 }
@@ -116,6 +130,8 @@ fall_status_t process_fall_detection(float intra_score, float current_dist)
 	{
 		return FALL_STATUS_NORMAL;
 	}
+
+	fall_status_t status = FALL_STATUS_NORMAL;
 
 	switch (sys_mode)
 	{
@@ -152,18 +168,20 @@ fall_status_t process_fall_detection(float intra_score, float current_dist)
 					strong_motion_cnt = 0;
 					suspected_total   = 0;
 					printf("\n[FALL] Suspected impact at %.2f m\n", pre_fall_dist);
-					return FALL_STATUS_SUSPECTED;
+					status            = FALL_STATUS_SUSPECTED;
 				}
-
-				return FALL_STATUS_IMPACT;
+				else
+				{
+					status            = FALL_STATUS_IMPACT;
+				}
 			}
 			else
 			{
 				// Tolerate brief single-frame dropouts: decrement rather than reset
 				impact_frame_cnt = (impact_frame_cnt > 2) ? impact_frame_cnt - 2 : 0;
+				status           = FALL_STATUS_NORMAL;
 			}
-
-			return FALL_STATUS_NORMAL;
+			break;
 		}
 
 		case MODE_SUSPECTED:
@@ -198,8 +216,12 @@ fall_status_t process_fall_detection(float intra_score, float current_dist)
 				{
 					sys_mode = MODE_ALARM;
 					printf("\n[FALL] ALARM — subject at %.2f m for %u s\n",
-					       current_dist, global_config.confirm_period_sec);
-					return FALL_STATUS_ALARM;
+					       current_dist, (unsigned int)global_config.confirm_period_sec);
+					status   = FALL_STATUS_ALARM;
+				}
+				else
+				{
+					status   = FALL_STATUS_SUSPECTED;
 				}
 			}
 			else if (dist_diff < required_dist * 0.5f)
@@ -212,19 +234,24 @@ fall_status_t process_fall_detection(float intra_score, float current_dist)
 				{
 					printf("[FALL] Cancelled: subject returned to original position\n");
 					sys_mode = MODE_NORMAL;
-					return FALL_STATUS_NORMAL;
+					status   = FALL_STATUS_NORMAL;
+				}
+				else
+				{
+					status   = FALL_STATUS_SUSPECTED;
 				}
 			}
 			else
 			{
 				// Intermediate zone: neither fallen nor recovered — reset recovery streak
 				recovery_cnt = 0;
+				status       = FALL_STATUS_SUSPECTED;
 			}
 
 			// --- Motion-based cancel ---
 			// Only cancel on very strong sustained motion (subject clearly standing and
 			// walking away). Normal struggling on the floor should NOT cancel.
-			if (intra_score > CANCEL_SCORE_THR)
+			if (status == FALL_STATUS_SUSPECTED && intra_score > CANCEL_SCORE_THR)
 			{
 				strong_motion_cnt++;
 
@@ -232,7 +259,7 @@ fall_status_t process_fall_detection(float intra_score, float current_dist)
 				{
 					printf("[FALL] Cancelled: strong sustained motion detected\n");
 					sys_mode = MODE_NORMAL;
-					return FALL_STATUS_NORMAL;
+					status   = FALL_STATUS_NORMAL;
 				}
 			}
 			else
@@ -241,14 +268,13 @@ fall_status_t process_fall_detection(float intra_score, float current_dist)
 			}
 
 			// --- Timeout ---
-			if (suspected_total >= SUSPECTED_TIMEOUT)
+			if (status == FALL_STATUS_SUSPECTED && suspected_total >= SUSPECTED_TIMEOUT)
 			{
 				printf("[FALL] Cancelled: timeout (no confirmation within 30 s)\n");
 				sys_mode = MODE_NORMAL;
-				return FALL_STATUS_NORMAL;
+				status   = FALL_STATUS_NORMAL;
 			}
-
-			return FALL_STATUS_SUSPECTED;
+			break;
 		}
 
 		case MODE_ALARM:
@@ -259,9 +285,24 @@ fall_status_t process_fall_detection(float intra_score, float current_dist)
 				alarm_print_counter = 0;
 			}
 
-			return FALL_STATUS_ALARM;
+			status = FALL_STATUS_ALARM;
+			break;
 		}
 	}
 
-	return FALL_STATUS_NORMAL;
+	// Send a BLE notification only when the state changes OR once per second (1 Hz heartbeat).
+	// This avoids flooding the GATT log with 20 identical updates per second during
+	// normal monitoring, while still guaranteeing that every state transition
+	// (NORMAL → SUSPECTED → ALARM) reaches the app immediately.
+	uint8_t new_ble_status = (uint8_t)sys_mode;
+	ble_update_counter++;
+
+	if (new_ble_status != prev_ble_status || ble_update_counter >= BLE_PERIODIC_FRAMES)
+	{
+		FALL_APP_UpdateData(new_ble_status, 0.0f, current_dist);
+		prev_ble_status    = new_ble_status;
+		ble_update_counter = 0;
+	}
+
+	return status;
 }

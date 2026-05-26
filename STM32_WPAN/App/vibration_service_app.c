@@ -270,11 +270,10 @@ __USED void VIBRATION_SERVICE_Spectrum_array_SendNotification(void) /* Property 
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS */
-void VIBRATION_APP_UpdateData(float freq, float displ, float freq2, float displ2)
+void VIBRATION_APP_UpdateData(float freq, float displ)
 {
     VIBRATION_Data_t data;
 
-    /* --- Peak 1: derive all physics from freq + displacement --- */
     data.frequency        = freq;
     data.displacement     = displ;
     if (freq > 0.0f && displ > 0.0f) {
@@ -293,10 +292,6 @@ void VIBRATION_APP_UpdateData(float freq, float displ, float freq2, float displ2
         data.acceleration     = 0.0f;
         data.acceleration_rms = 0.0f;
     }
-
-    /* --- Peak 2: just store freq + displacement --- */
-    data.frequency2    = freq2;
-    data.displacement2 = displ2;
 
     VIBRATION_SERVICE_Data_t ble_data;
     ble_data.p_Payload = (uint8_t*)&data;

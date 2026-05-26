@@ -19,6 +19,11 @@
    - [Reading the Results](#reading-the-results-1)
    - [Tips for Better Readings](#tips-for-better-readings)
 5. [Fall Detection](#5-fall-detection)
+   - [Setting Up](#setting-up-2)
+   - [How It Works](#how-it-works)
+   - [Detection Behaviour](#detection-behaviour)
+   - [Alarm and Reset](#alarm-and-reset)
+   - [Tips for Better Results](#tips-for-better-results)
 6. [Tips and Best Practices](#6-tips-and-best-practices)
    - [Vibration Measurements](#vibration-measurements)
    - [Vital Signs Measurements](#vital-signs-measurements)
@@ -159,13 +164,58 @@ Use this mode to measure breathing rate and heart rate from a distance — no co
 
 - Reduce ambient movement in the room — the radar picks up any motion in its field of view.
 - Keep the sensor aimed at the chest area rather than the head or legs.
-- Allow 10–15 seconds after tapping START for the readings to stabilise.
+- **During the first 6–8 seconds after tapping START**, the sensor runs an internal calibration sweep across all range bins to pick the best one. No readings appear during this window — this is normal.
+- After the calibration sweep, allow a further **10–15 seconds** for the breathing and heart-rate estimates to stabilise before reading the values.
+- If the heart rate shows **0** while breathing rate is visible, the heart signal is not yet above the confidence threshold. Allow more time, minimise body movement, and ensure the sensor is aimed at the chest rather than the head or abdomen.
+- If both readings stay at 0 after 30 seconds, try adjusting the sensor angle or distance slightly.
 
 ---
 
 ## 5. Fall Detection
 
-> **This feature is under development** and will be available in a future update. The Fall Detection tab currently shows a placeholder screen.
+Use this mode to automatically detect if a monitored person falls. The sensor watches for a sudden, sustained impact burst, then confirms whether the person has moved to a significantly different position — triggering an alarm if they remain there for the confirmation period.
+
+### Setting Up
+
+1. Mount the sensor at a **fixed position** — on a shelf, table, or wall bracket — with a clear view of the area where the person will be moving. A height of 0.5 to 2.0 m and a slight downward angle works well; avoid mounting directly above the person.
+2. The person can move freely during normal activity. The sensor only triggers when it detects a sustained impact followed by a large position change.
+3. Tap the **Fall Detection** tab, connect if not already connected, then tap **START MONITOR**.
+
+### How It Works
+
+The detector runs a four-stage process every frame:
+
+| Stage | What it means |
+|---|---|
+| **Monitoring** | Normal; no event detected. |
+| **Impact** | A sustained energy burst is accumulating — tracking to see if it is a real impact. |
+| **Suspected** | Impact confirmed; the sensor is now checking whether the person has stayed at a displaced position. |
+| **ALARM** | Fall confirmed — the person has been at a displaced position for the full confirmation window. |
+
+### Detection Behaviour
+
+**Impact detection:** The algorithm triggers when the radar's motion-energy score exceeds the impact threshold continuously for at least 0.5 seconds. A brief spike — dropping an object, a chair shifting — does not trigger it; the burst must be sustained.
+
+**Confirmation window:** After an impact, the sensor checks whether the person has moved to a significantly different distance and stayed there. The person does **not** need to be still — struggling or movement at the fallen position counts. The fall is confirmed after the person remains displaced for the full confirmation period (default: 5 seconds).
+
+**Automatic cancellation:** The suspected state is cancelled automatically if any of these occur:
+- The person returns to their original position for 2 consecutive seconds — they recovered on their own.
+- Very strong, sustained motion is detected for 1 second — the person is clearly standing up and walking away.
+- 30 seconds pass without a clear result — safety timeout to avoid being stuck indefinitely.
+
+**Resting-before-impact protection:** If the person was already still for more than 5 seconds before the impact (for example, lying in bed), the sensor requires a *larger* position change to confirm a fall. This reduces false alarms from bed rolls or repositioning movements.
+
+### Alarm and Reset
+
+When a fall is confirmed, the app displays an alarm screen and the sensor continuously signals the alarm state. Tap **CLEAR ALARM** in the app to acknowledge and return the sensor to normal monitoring.
+
+> **This device is not a substitute for a professional emergency response system.** Do not rely on it as the sole safety measure for a person at high risk of falling.
+
+### Tips for Better Results
+
+- Ensure a clear, unobstructed line of sight between the sensor and the area being monitored.
+- Avoid placing the sensor where everyday activities — sitting down quickly, bending to pick something up — would consistently score above the impact threshold. If false triggers occur, the threshold can be adjusted in firmware.
+- For best distance tracking after impact, the sensor should be roughly at the same height as the person's standing centre of mass (~0.5 to 1.5 m), not mounted directly overhead.
 
 ---
 

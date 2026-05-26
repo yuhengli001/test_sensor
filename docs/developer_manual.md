@@ -34,8 +34,26 @@
    - [5.6 Post-Processing: Stability Filter and Output Gate](#56-post-processing-stability-filter-and-output-gate)
    - [5.7 Timing Summary](#57-timing-summary)
    - [5.8 Full Code Flow Reference](#58-full-code-flow-reference)
-6. [Vital Signs Mode](#6-vital-signs-mode)
-7. [Fall Detection Mode](#7-fall-detection-mode)
+6. [Vital Signs Mode](#6-vital-signs-mode--technical-reference)
+   - [6.1 Overview](#61-overview)
+   - [6.2 Configuration Constants](#62-configuration-constants)
+   - [6.3 Coarse Sweep](#63-coarse-sweep)
+   - [6.4 Fine Measurement — Signal Processing Pipeline](#64-fine-measurement--signal-processing-pipeline)
+   - [6.5 Breathing Rate Estimation](#65-breathing-rate-estimation)
+   - [6.6 Heart Rate Estimation](#66-heart-rate-estimation)
+   - [6.7 Output and BLE Notification](#67-output-and-ble-notification)
+   - [6.8 Static Memory Footprint](#68-static-memory-footprint)
+   - [6.9 Integration with radar_adapter.c](#69-integration-with-radar_adapterc)
+7. [Fall Detection Mode](#7-fall-detection-mode--technical-reference)
+   - [7.1 Overview](#71-overview)
+   - [7.2 State Machine](#72-state-machine)
+   - [7.3 Impact Detection (MODE_NORMAL)](#73-impact-detection-mode_normal)
+   - [7.4 Confirmation Phase (MODE_SUSPECTED)](#74-confirmation-phase-mode_suspected)
+   - [7.5 Alarm State (MODE_ALARM)](#75-alarm-state-mode_alarm)
+   - [7.6 Configurable Parameters](#76-configurable-parameters-global_config)
+   - [7.7 Internal Thresholds](#77-internal-thresholds-hardcoded-define)
+   - [7.8 BLE Output](#78-ble-output)
+   - [7.9 Integration with radar_adapter.c](#79-integration-with-radar_adapterc)
 8. [iOS App](#8-ios-app)
    - [8.1 Project File Structure](#81-project-file-structure)
    - [8.2 RadarBLEManager](#82-radarbemanager)
@@ -202,6 +220,8 @@ The firmware is built on top of the STM32 WPAN middleware and the Acconeer RSS S
 | `STM32_WPAN/App/control_service.c` | GATT characteristic definitions for Control Service (FE40) |
 | `STM32_WPAN/App/vibration_service_app.c` | Stores `Vibration_Config`, handles FE71 config writes, sends FE72 BLE notifications |
 | `STM32_WPAN/App/vibration_service.c` | GATT characteristic definitions for Vibration Service (FE70) |
+| `cortex_m33_gcc/examples/getting_started/vital_signs.c` | Vital signs algorithm — coarse sweep, IIR filters, LMS ANC, FFT, BPM estimation |
+| `cortex_m33_gcc/examples/getting_started/fall_detector.c` | Fall detection state machine — impact detection, confirmation window, alarm |
 | `cortex_m33_gcc/integration/` | Acconeer HAL integration — SPI, GPIO, sleep, interrupt wait |
 
 **Acconeer SDK modules used:**
@@ -827,15 +847,501 @@ The complete end-to-end code flow for a vibration session — from phone connect
 
 ---
 
-## 6. Vital Signs Mode
+## 6. Vital Signs Mode — Technical Reference
 
-> **Algorithm implemented, configuration UI under development.** See `radar_adapter.c` (`init_presence`, `RADAR_MODE_VITAL` branch) for the current firmware implementation. BLE config characteristic not yet defined.
+### 6.1 Overview
+
+The vital signs mode estimates **breathing rate (9–42 BPM)** and **heart rate (54–180 BPM)** from the unwrapped phase of the presence detector's locked range bin. It operates in two sequential phases to minimise warm-up latency:
+
+1. **Coarse sweep (~6.4 s):** Collects 128 frames simultaneously across all active candidate range bins, runs a 128-point FFT on each, and selects the closest bin whose heartbeat-band SNR exceeds a minimum threshold.
+2. **Fine measurement (continuous):** Runs a full sliding-window spectral analysis on the single locked bin, producing a new BPM estimate every 10 new samples (~0.5 s once the circular buffer is full).
+
+All vital signs logic lives in [`vital_signs.c`](../cortex_m33_gcc/examples/getting_started/vital_signs.c) and [`vital_signs.h`](../cortex_m33_gcc/examples/getting_started/vital_signs.h).
 
 ---
 
-## 7. Fall Detection Mode
+### 6.2 Configuration Constants
 
-> **Under development.** The presence detector infrastructure is shared with Vital Signs mode. Fall event classification logic is not yet implemented in firmware or iOS app.
+| Parameter | Value | Defined in |
+|---|---|---|
+| `SAMPLE_RATE_HZ` | 20 Hz | `app_config.h` |
+| `FFT_N` | 512 | `app_config.h` — fine FFT size (zero-padded) |
+| `WINDOW_LEN` | 128 samples | `vital_signs.c` — fine circular buffer (6.4 s) |
+| `COARSE_N` | 128 frames | `vital_signs.h` — coarse sweep depth |
+| `COARSE_MAX_CANDS` | 64 slots | `vital_signs.h` — max candidate range bins |
+| `BPM_HIST_N` | 5 | `vital_signs.c` — median filter history depth |
+| Breathing band | 0.15 – 0.70 Hz | 9 – 42 BPM |
+| Heart band | 0.90 – 3.00 Hz | 54 – 180 BPM |
+| HP filter alpha | 0.9845 | fc ≈ 0.05 Hz at dt = 0.05 s |
+| LMS order | 16 taps | delay = 10 samples |
+| LMS step size µ | 0.002 | normalised; hard-capped at 0.05 |
+| LMS weight decay | 0.999 | Leaky NLMS — prevents long-term drift |
+| PSD IIR alpha | 0.5 | ~1 s time constant |
+
+---
+
+### 6.3 Coarse Sweep
+
+The coarse sweep runs once at session start before the fine filter locks in.
+
+```
+vital_signs_coarse_start()
+    Zero coarse_buf[COARSE_MAX_CANDS][COARSE_N]; set coarse_fill = 0
+
+Per presence frame (driven by radar_adapter.c):
+    vital_signs_coarse_feed(slot, angle)    ← store unwrapped phase for each candidate bin
+    vital_signs_coarse_tick()               ← increment frame counter; returns true at frame 128
+
+When tick returns true:
+    vital_signs_coarse_pick_best(n_candidates)
+        For each slot 0..n_candidates-1:
+            Remove DC (subtract mean over 128 samples)
+            128-point in-place radix-2 FFT
+            breathing SNR = peak_power / avg_power in [0.15, 0.70] Hz
+            heart SNR     = peak_power / avg_power in [0.90, 3.00] Hz
+            Log bins where either SNR > 1.2
+        Return the closest slot where heart SNR > 1.5
+        Return -1 if no slot qualifies
+
+    vital_signs_replay_coarse(best_slot)
+        For each of the 128 stored frames:
+            apply_hp() → apply_butterworth_b() → store in distance_history_b[]
+            apply_hp() → apply_butterworth_h() → store in distance_history_h[]
+        Force slide_counter = 10 so the fine FFT fires on the very next frame
+```
+
+**Purpose of the replay:** Seeding the fine filter's circular buffer with coarse data eliminates the 6.4 s cold-start wait for the fine FFT. Results are available almost immediately after the coarse sweep completes.
+
+---
+
+### 6.4 Fine Measurement — Signal Processing Pipeline
+
+Called as `process_vital_signs(difference, current_dist)` on every frame from the presence detector.
+
+```
+Unwrapped phase (radians)
+│
+├─ 1. 0.05 Hz high-pass filter                   apply_hp()
+│       α = 0.9845; removes DC offset and slow baseline drift
+│       (first sample outputs 0; hp_x_prev seeded with the input value)
+│
+├─ 2. Breathing band-pass (0.15 – 0.70 Hz)       apply_butterworth_b()
+│       4th-order IIR Butterworth, direct form II transposed
+│       Coefficients generated by acc_algorithm_butter_bandpass()
+│
+├─ 3. LMS adaptive noise canceller               (inline)
+│       Shift reference delay line lms_x[LMS_ORDER + LMS_DELAY]
+│       y = Σ lms_w[i] × lms_x[i + LMS_DELAY]   ← estimated breathing component
+│       raw_clean = hp_diff - y                  ← breathing cancelled
+│       Normalised step: norm_step = µ / energy; capped at 0.05
+│       Weight update: lms_w[i] = 0.999 × lms_w[i] + 2 × norm_step × error × ref
+│
+├─ 4. Heart band-pass (0.90 – 3.00 Hz)           apply_butterworth_h()
+│       Applied to raw_clean (noise-cancelled signal)
+│
+├─ 5. Circular ring buffer (128 samples)
+│       distance_history_b[dist_idx] ← filtered_b
+│       distance_history_h[dist_idx] ← clean_h
+│       dist_idx wraps at WINDOW_LEN; buffer_full set when first wrap occurs
+│
+└─ 6. Sliding-window FFT (every 10 new samples, once buffer_full)
+        Apply Hamming window: w[k] = 0.54 − 0.46 × cos(2π k / (N−1))
+        Zero-pad to FFT_N = 512
+        compute_fft() — radix-2 Cooley-Tukey, in-place on complex_t array
+        Update smoothed PSD: s_psd_smooth[k] = 0.5 × old + 0.5 × new
+            (first frame seeds the smoothed PSD directly — no blending)
+```
+
+---
+
+### 6.5 Breathing Rate Estimation
+
+```
+Search bins: b_min = max(4, ⌊0.15 × FFT_N / SAMPLE_RATE_HZ⌋)
+             b_max = ⌊0.70 × FFT_N / SAMPLE_RATE_HZ⌋
+freq_delta  = SAMPLE_RATE_HZ / FFT_N ≈ 0.039 Hz/bin
+
+1. Find local maxima in s_psd_b_smooth[]  (up to MAX_RESP_CANDIDATES = 4)
+   Fallback: use global maximum if no local maxima exist
+
+2. Gaussian peak interpolation (sub-bin precision):
+   gaussian_peak_interp() fits a log-parabola to bins [k−1, k, k+1]
+   delta = 0.5 × (a − c) / (a − 2b + c);  clamped to [−0.5, 0.5]
+
+3. Score each candidate:
+   score = power × boost
+   boost = 2.0 if |freq − tracked_resp_freq| < 0.08 Hz  (≈ 4.8 BPM window)
+           1.0 otherwise
+
+4. Tracking state machine:
+   Init:    tracked_resp_freq ← best candidate; switch_resp_frame_cnt = 0
+   Locked:  |new − tracked| < 0.08 Hz → tracked = 0.9 × tracked + 0.1 × new
+   Diverged: switch_resp_frame_cnt++; after 6 consecutive diverging frames (~3 s) → force re-lock
+
+5. SNR gate: snr_b = peak_power / avg_in_band; output gated at snr_b > 2.0
+```
+
+---
+
+### 6.6 Heart Rate Estimation
+
+```
+Search bins: h_min = ⌊0.90 × FFT_N / SAMPLE_RATE_HZ⌋
+             h_max = ⌊3.00 × FFT_N / SAMPLE_RATE_HZ⌋
+
+1. Breathing harmonic suppression (applied if snr_b > 2.0):
+   For harmonics m = 3 to 6 of freq_b:
+       bin index h_idx = round(m × freq_b / freq_delta)
+       s_psd_h_smooth[h_idx + offset] ×= 0.15  for offset ∈ {−1, 0, +1}
+       (only within h_min..h_max bounds)
+
+2. Find local maxima in s_psd_h_smooth[]  (up to MAX_CANDIDATE_PEAKS = 4)
+   Fallback: global maximum
+
+3. Score each candidate:
+   score = power × penalty × boost
+   penalty = 0.1 if |freq − m × freq_b| < 0.08 Hz for any harmonic m ∈ {3..6}
+   boost   = 2.0 if |freq − tracked_heart_freq| < 0.15 Hz  (≈ 9 BPM window)
+
+4. Tracking state machine (same structure as breathing):
+   Locked threshold: 0.15 Hz
+   Re-lock after 6 diverging frames
+
+5. SNR gate: snr_h = peak_power / avg_in_band; heart rate reported only when snr_h > 2.0
+   (0.0 is sent when SNR is insufficient)
+```
+
+---
+
+### 6.7 Output and BLE Notification
+
+```c
+// 5-element median filter on BPM history
+float smooth_b = compute_median5(bpm_b_hist, bpm_b_hist_cnt);
+float smooth_h = compute_median5(bpm_h_hist, bpm_h_hist_cnt);
+
+// h_ok gates the heart rate — 0.0 if SNR insufficient
+VITAL_APP_UpdateData(smooth_b, h_ok ? smooth_h : 0.0f, current_dist);
+```
+
+`VITAL_APP_UpdateData()` serialises the three floats into the FE52 BLE notification (12 bytes, little-endian). The breathing rate is always output once BPM history is populated; the heart rate falls back to 0.0 until `snr_h > 2.0`.
+
+**Debug log (printed every frame):**
+```
+[Vitals] Dist: 0.85m | Resp: 16.2 BPM (SNR: 4) | Heart: 72.5 BPM (SNR: 3)
+```
+During buffer fill (before the first FFT fires), a progress line is printed every 40 frames:
+```
+[Vitals] Buffering: 40/128
+```
+
+---
+
+### 6.8 Static Memory Footprint
+
+| Buffer | Bytes | Notes |
+|---|---|---|
+| `distance_history_b[128]` | 512 | Breathing fine circular buffer |
+| `distance_history_h[128]` | 512 | Heart fine circular buffer |
+| `s_fft_b[512]` + `s_fft_h[512]` | 8 192 | Fine FFT workspace (complex_t = 8 B each) |
+| `s_psd_b_smooth[257]` + `s_psd_h_smooth[257]` | 2 056 | Smoothed PSD arrays |
+| `s_window[512]` | 2 048 | Hamming window coefficients |
+| `coarse_buf[64][128]` | 32 768 | Coarse sweep phase buffer |
+| `coarse_fft_work[128]` | 1 024 | Coarse FFT workspace |
+| `lms_w[16]` + `lms_x[26]` | 168 | LMS filter state |
+| BPM history × 2 | 40 | bpm_b_hist + bpm_h_hist |
+| Scalar state (IIR states, trackers, indices) | ~100 | Filter states, HP state, tracking vars |
+| **Total** | **~47 KB** | Static allocation, no heap |
+
+---
+
+### 6.9 Integration with `radar_adapter.c`
+
+`vital_signs.c` contains no sensor access — it is a pure signal-processing library. All sensor I/O, presence-detector lifecycle, and call sequencing are owned by [`radar_adapter.c`](../STM32_WPAN/App/radar_adapter.c). The adapter runs a three-phase internal state machine (`det_phase_t`) that gates when vital signs functions are called:
+
+```
+Radar_Adapter_Start(RADAR_MODE_VITAL)
+    └─ init_presence()
+         ├─ Configure & create acc_detector_presence (range 0.3–2.5 m, 16 spf, 20 Hz)
+         ├─ Calibrate sensor → acc_detector_presence_prepare()
+         ├─ fall_detector_init()       ← always initialised alongside vital signs
+         └─ vital_signs_init()
+              det_phase = DET_SEARCHING
+
+─────────────────────────────────────────────────────────────────────────────
+Per-frame call: Radar_Adapter_Process(RADAR_MODE_VITAL)
+─────────────────────────────────────────────────────────────────────────────
+
+acc_sensor_measure → wait_for_interrupt → acc_sensor_read
+acc_detector_presence_process() → result (intra_score, presence_distance, frame IQ)
+
+┌─ DET_SEARCHING ─────────────────────────────────────────────────────────┐
+│  Presence not detected or tracked_index == -1                           │
+│  No vital signs calls; waiting for a stable target                      │
+└─────────────────────────────────────────────────────────────────────────┘
+        │ new presence detected (prev_tracked == -1, tracked_index ≥ 0)
+        ▼
+┌─ DET_COARSE ────────────────────────────────────────────────────────────┐
+│  3 candidate bins around the locked range index                         │
+│  Each frame:                                                            │
+│    vital_signs_coarse_feed(slot, unwrapped_angle)  ← once per candidate │
+│    vital_signs_coarse_tick()  ← returns true at frame 128 (~6.4 s)      │
+│                                                                         │
+│  On tick == true:                                                       │
+│    best = vital_signs_coarse_pick_best(n_candidates)                    │
+│    if best >= 0:                                                        │
+│        vital_signs_init()          ← clear fine filter state            │
+│        vital_signs_replay_coarse(best)  ← seed fine buffer              │
+│        det_phase = DET_MEASURING                                        │
+│    else:                                                                │
+│        tracked_index = -1; det_phase = DET_SEARCHING (retry)            │
+└─────────────────────────────────────────────────────────────────────────┘
+        │ coarse succeeded
+        ▼
+┌─ DET_MEASURING ─────────────────────────────────────────────────────────┐
+│  Each frame:                                                            │
+│    Sub-bin energy centroid → raw_dist                                   │
+│    EMA smoothing: ema_dist = 0.05 × raw + 0.95 × prev                   │
+│    update_phase() → unwrapped_angle (phase unwrapping on locked bin)    │
+│    process_vital_signs(unwrapped_angle, ema_dist)  ← vital signs call   │
+│                                                                         │
+│  Phase renormalisation: every 600 s → vital_signs_init() to prevent     │
+│  accumulated phase drift (phase_renorm_counter resets)                  │
+│                                                                         │
+│  Target lost (10 s no presence): tracked_index = -1                     │
+│    → vital_signs_init(); det_phase = DET_SEARCHING                      │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key points:**
+- `process_vital_signs()` is **only called in `DET_MEASURING`**. During the coarse sweep and target search phases, no BPM output is produced.
+- The presence detector configuration (`start = 0.3 m`, `end = 2.5 m`, `sweeps_per_frame = 16`, `frame_rate = 20 Hz`) is hardcoded in `init_presence()`.
+- `fall_detector_init()` is always called together with `vital_signs_init()` inside `init_presence()`. Both algorithms share the same presence detector session.
+
+---
+
+## 7. Fall Detection Mode — Technical Reference
+
+### 7.1 Overview
+
+Fall detection uses the **intra-frame presence score** (`intra_score`) from the Acconeer presence detector as an energy proxy for sudden movement, and the **distance estimate** (`current_dist`) as a position reference to confirm displacement. A state machine transitions through impact detection, a confirmation window, and an alarm — with multiple cancellation conditions to suppress false alarms.
+
+All fall detection logic lives in [`fall_detector.c`](../cortex_m33_gcc/examples/getting_started/fall_detector.c) and [`fall_detector.h`](../cortex_m33_gcc/examples/getting_started/fall_detector.h).
+
+---
+
+### 7.2 State Machine
+
+```
+                   intra_score > fall_score_threshold
+                   sustained for ≥ 0.5 s
+  MODE_NORMAL ─────────────────────────────────────────→ MODE_SUSPECTED
+      ↑                                                        │  │  │
+      │◄── dist returns to pre-fall pos for 2 s ──────────────┘   │  │
+      │◄── strong motion (score > 25) for 1 s ─────────────────── ┘  │
+      │◄── timeout: 30 s in SUSPECTED ───────────────────────────────┘
+      │
+      │         fallen_pos_cnt ≥ confirm_period_sec × SAMPLE_RATE_HZ
+      └──── MODE_ALARM ←─────────────────────────────── MODE_SUSPECTED
+                │
+                └──── fall_detector_reset_alarm() ──→ MODE_NORMAL
+```
+
+| `sys_mode` | Returned `fall_status_t` | Meaning |
+|---|---|---|
+| `MODE_NORMAL` | `FALL_STATUS_NORMAL` (1) | No event; normal monitoring |
+| `MODE_NORMAL` (building up) | `FALL_STATUS_IMPACT` (2) | Sustained burst in progress; not yet MODE_SUSPECTED |
+| `MODE_SUSPECTED` | `FALL_STATUS_SUSPECTED` (3) | Post-impact; tracking displacement to confirm |
+| `MODE_ALARM` | `FALL_STATUS_ALARM` (4) | Fall confirmed |
+
+`FALL_STATUS_IMPACT` is returned during the 0.5 s accumulation window before entering `MODE_SUSPECTED` — useful for showing an "impact in progress" indicator in the app.
+
+---
+
+### 7.3 Impact Detection (MODE_NORMAL)
+
+```
+Each frame:
+
+  // Track resting state (used to set stricter displacement threshold)
+  if intra_score < 5.0:   resting_frame_cnt++
+  elif intra_score > 10.0: resting_frame_cnt = 0
+
+  // Impact burst detection
+  if intra_score > fall_score_threshold:
+      if impact_frame_cnt == 0:
+          pre_fall_dist = current_dist
+          was_resting_before_impact = (resting_frame_cnt > 5 s × SAMPLE_RATE_HZ)
+      impact_frame_cnt++
+
+      if impact_frame_cnt ≥ 0.5 s × SAMPLE_RATE_HZ  (= 10 frames at 20 Hz):
+          sys_mode = MODE_SUSPECTED
+          return FALL_STATUS_SUSPECTED
+      else:
+          return FALL_STATUS_IMPACT
+
+  else:
+      impact_frame_cnt = max(0, impact_frame_cnt − 2)   ← hysteresis; tolerate brief dips
+      return FALL_STATUS_NORMAL
+```
+
+**Resting-before-impact flag:** If the subject was stationary (`intra_score < 5.0`) for more than 5 continuous seconds before the impact, `was_resting_before_impact` is set `true`. This activates a **doubled distance threshold** in MODE_SUSPECTED — when someone is already lying or sitting, a posture shift or bed roll can exceed the score threshold without a real fall, so a larger displacement is required to confirm.
+
+---
+
+### 7.4 Confirmation Phase (MODE_SUSPECTED)
+
+The confirmation window counts frames where the subject is at a significantly different distance from their pre-fall position. The subject does **not** need to be still — struggling, breathing, and movement all count.
+
+```
+Each frame in MODE_SUSPECTED:
+    suspected_total++
+
+    dist_diff     = |current_dist − pre_fall_dist|
+    required_dist = was_resting_before_impact
+                    ? fall_dist_threshold × 2.0
+                    : fall_dist_threshold
+
+    // --- Distance-based confirmation ---
+    if dist_diff ≥ required_dist:
+        fallen_pos_cnt++
+        recovery_cnt = 0
+        if fallen_pos_cnt ≥ confirm_period_sec × SAMPLE_RATE_HZ:
+            sys_mode = MODE_ALARM
+            return FALL_STATUS_ALARM
+
+    elif dist_diff < required_dist × 0.5:       ← clearly back near original position
+        recovery_cnt++
+        fallen_pos_cnt = max(0, fallen_pos_cnt − 2)    ← hysteresis
+        if recovery_cnt ≥ RECOVERY_MIN_FRAMES (2 s × 20 Hz = 40 frames):
+            sys_mode = MODE_NORMAL
+            return FALL_STATUS_NORMAL  (cancelled: recovered)
+
+    else:                                        ← intermediate zone
+        recovery_cnt = 0
+        (status stays SUSPECTED; neither counter advances)
+
+    // --- Motion-based cancel (still SUSPECTED after distance check) ---
+    if intra_score > CANCEL_SCORE_THR (25.0):
+        strong_motion_cnt++
+        if strong_motion_cnt ≥ CANCEL_MIN_FRAMES (1 s × 20 Hz = 20 frames):
+            sys_mode = MODE_NORMAL
+            return FALL_STATUS_NORMAL  (cancelled: standing up)
+    else:
+        strong_motion_cnt = 0
+
+    // --- Timeout ---
+    if suspected_total ≥ SUSPECTED_TIMEOUT (30 s × 20 Hz = 600 frames):
+        sys_mode = MODE_NORMAL
+        return FALL_STATUS_NORMAL  (cancelled: timeout)
+```
+
+**Why the intermediate zone?** When `required_dist × 0.5 ≤ dist_diff < required_dist`, the subject is ambiguously positioned. Neither the fallen counter nor the recovery counter advances, giving the subject time to settle into one of the two definitive zones before a decision is made.
+
+---
+
+### 7.5 Alarm State (MODE_ALARM)
+
+Once the alarm is entered, `process_fall_detection()` returns `FALL_STATUS_ALARM` every frame indefinitely. Every 2 seconds (`alarm_print_counter ≥ 2 × SAMPLE_RATE_HZ`) the following is printed:
+
+```
+[CRITICAL] Fall detected!
+```
+
+The alarm is cleared **only** by an explicit call to `fall_detector_reset_alarm()`, which resets all counters and returns to `MODE_NORMAL`. In the application, this is triggered by the iOS app sending a BLE command when the user taps the clear/acknowledge button.
+
+---
+
+### 7.6 Configurable Parameters (`global_config`)
+
+Defined in `fall_detector.c` as `app_config_t global_config`:
+
+| Field | Default | Tuning range | Description |
+|---|---|---|---|
+| `fall_score_threshold` | 20.0 | 15.0 – 30.0 | Minimum `intra_score` to begin counting an impact burst. Raise to suppress false triggers from dropped objects or sudden chair movements; lower to catch softer falls. |
+| `fall_dist_threshold` | 0.20 m | 0.15 – 0.40 m | Minimum distance change from pre-fall position required to count a frame as "fallen". When `was_resting_before_impact` is set, 2× this value is required. |
+| `confirm_period_sec` | 5 s | 3 – 10 s | Seconds the subject must remain at the displaced position to trigger the alarm. Does not require stillness. Lower = faster alarm, higher = more conservative. |
+| `enable_fall_detection` | `true` | bool | Master enable. `false` makes `process_fall_detection()` return `FALL_STATUS_NORMAL` immediately. |
+| `enable_vitals_monitoring` | `true` | bool | Enables vital signs processing in `process_vital_signs()`. |
+
+---
+
+### 7.7 Internal Thresholds (Hardcoded `#define`)
+
+| Constant | Value | Description |
+|---|---|---|
+| `RECOVERY_SEC` | 2.0 s | Time the subject must be back near their original position to cancel MODE_SUSPECTED. Lower = faster cancel on recovery; higher = tolerates brief returns. |
+| `RECOVERY_MIN_FRAMES` | 40 | `RECOVERY_SEC × SAMPLE_RATE_HZ` |
+| `CANCEL_SCORE_THR` | 25.0 | `intra_score` level that indicates the subject is standing up and walking away. Must be greater than `fall_score_threshold` to avoid cancelling on floor-level struggling. |
+| `CANCEL_SEC` | 1.0 s | Duration of sustained `CANCEL_SCORE_THR` motion required to cancel. Prevents a single large movement (attempting to get up) from clearing the alert. |
+| `CANCEL_MIN_FRAMES` | 20 | `CANCEL_SEC × SAMPLE_RATE_HZ` |
+| `SUSPECTED_TIMEOUT_SEC` | 30.0 s | Maximum time in MODE_SUSPECTED before giving up. Safety net in case distance tracking is ambiguous for an extended period. |
+| `SUSPECTED_TIMEOUT` | 600 | `SUSPECTED_TIMEOUT_SEC × SAMPLE_RATE_HZ` |
+
+---
+
+### 7.8 BLE Output
+
+```c
+FALL_APP_UpdateData((uint8_t)sys_mode, 0.0f, current_dist);
+```
+
+Called every frame. The first argument maps directly to `MODE_NORMAL` (0) / `MODE_SUSPECTED` (1) / `MODE_ALARM` (2) — the iOS app uses this to drive the dashboard state. The `fall_status_t` return value (1–4) is available to the adapter layer for finer-grained UI feedback (`IMPACT` vs `SUSPECTED`).
+
+**Debug log (printed on state transitions only):**
+
+```
+[FALL] Suspected impact at 0.85 m
+[FALL] ALARM — subject at 0.72 m for 5 s
+[FALL] Cancelled: subject returned to original position
+[FALL] Cancelled: strong sustained motion detected
+[FALL] Cancelled: timeout (no confirmation within 30 s)
+[FALL] Alarm cleared
+```
+
+---
+
+### 7.9 Integration with `radar_adapter.c`
+
+Like vital signs, `fall_detector.c` is a pure algorithm module — no sensor access. `radar_adapter.c` owns all sensor I/O and determines when `process_fall_detection()` is called.
+
+```
+Radar_Adapter_Start(RADAR_MODE_FALL)
+    └─ init_presence()          ← identical path to RADAR_MODE_VITAL
+         ├─ acc_detector_presence (range 0.3–2.5 m, 16 spf, 20 Hz)
+         ├─ fall_detector_init()
+         └─ vital_signs_init()
+              det_phase = DET_SEARCHING
+
+─────────────────────────────────────────────────────────────────────────────
+Per-frame call: Radar_Adapter_Process(RADAR_MODE_FALL)
+─────────────────────────────────────────────────────────────────────────────
+
+acc_detector_presence_process() → result (intra_score, presence_distance, frame IQ)
+
+... same DET_SEARCHING → DET_COARSE → DET_MEASURING state machine as vital signs ...
+    (process_vital_signs() is also called in DET_MEASURING — both run simultaneously)
+
+/* Fall detection runs every frame regardless of phase-lock state */
+if (mode == RADAR_MODE_FALL):
+    fall_dist = (det_phase == DET_MEASURING)
+                ? ctx.ema_dist               ← high-quality sub-bin distance
+                : result.presence_distance   ← coarse presence distance
+    process_fall_detection(result.intra_presence_score, fall_dist)
+```
+
+**Key differences from vital signs mode:**
+
+| Aspect | Vital Signs (`RADAR_MODE_VITAL`) | Fall Detection (`RADAR_MODE_FALL`) |
+|---|---|---|
+| `init_presence()` | Same call | Same call (shared) |
+| `process_vital_signs()` | Called in DET_MEASURING only | Called in DET_MEASURING only |
+| `process_fall_detection()` | **Not called** | **Called every frame** (all phases) |
+| Distance source | Always `ema_dist` (DET_MEASURING) | `ema_dist` when locked; `presence_distance` when searching |
+
+**Why fall detection runs every frame:** A fall can happen at any time — including before the coarse sweep has selected a locked bin. Using the presence detector's raw `presence_distance` ensures no impact event is missed during the initial scan. Once the fine distance tracker is running, the more accurate `ema_dist` is used.
+
+**Shared initialisation:** Both modes call the exact same `init_presence()`. Fall and vital sign state is always reset together. There is currently no way to enable only one algorithm without the other at the C level — the `enable_fall_detection` and `enable_vitals_monitoring` flags in `global_config` are the software switches that gate each algorithm's output.
 
 ---
 

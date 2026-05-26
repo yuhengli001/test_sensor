@@ -44,14 +44,9 @@ typedef struct {
     /* --- Vibration State --- */
     acc_vibration_handle_t   *vib_handle;
     acc_vibration_config_t    vib_config;
-    /* Peak 1 stability */
     float                     vib_prev_freq;
     uint32_t                  vib_stability_counter;
     bool                      vib_was_stable;
-    /* Peak 2 stability */
-    float                     vib_prev_freq2;
-    uint32_t                  vib_stability_counter2;
-    bool                      vib_was_stable2;
 
     /* --- Presence (Vital/Fall) State --- */
     acc_detector_presence_handle_t *presence_handle;
@@ -276,7 +271,8 @@ bool Radar_Adapter_Start(Radar_Mode_t mode) {
 
 static float update_phase(const acc_detector_presence_result_t *res,
                            uint16_t num_points, uint16_t spf, int bin,
-                           float *prev_a, bool *first, float *unwrapped)
+                           float *prev_a, bool *first, float *unwrapped,
+                           float *out_amp)
 {
     float complex mean = 0.0f + 0.0f * I;
     for (int s = 0; s < spf; s++) {
@@ -284,6 +280,10 @@ static float update_phase(const acc_detector_presence_result_t *res,
         mean += (float)p.real + (float)p.imag * I;
     }
     mean /= spf;
+
+    if (out_amp != NULL) {
+        *out_amp = cabsf(mean);
+    }
 
     float angle = cargf(mean);
     if (*first) {
@@ -345,47 +345,24 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
                 if (result.peak_count == 0) {
                     LOG_INFO_APP("[VIB RAW] No peaks (peak_count=0)\r\n");
                 } else {
-                    LOG_INFO_APP("[VIB RAW] peaks=%u  "
-                                 "tracked1=%.2f Hz stab=%lu  "
-                                 "tracked2=%.2f Hz stab=%lu  "
-                                 "| raw[0]=%.2f Hz  raw[1]=%.2f Hz\r\n",
+                    LOG_INFO_APP("[VIB RAW] peaks=%u  tracked=%.2f Hz stab=%lu/%d"
+                                 "  | raw[0]=%.2f Hz disp=%.2f um"
+                                 "  raw[1]=%.2f Hz disp=%.2f um\r\n",
                         (unsigned)result.peak_count,
-                        ctx.vib_prev_freq,  (unsigned long)ctx.vib_stability_counter,
-                        ctx.vib_prev_freq2, (unsigned long)ctx.vib_stability_counter2,
-                        result.peak_frequencies[0],
-                        (result.peak_count > 1) ? result.peak_frequencies[1] : 0.0f);
+                        ctx.vib_prev_freq, (unsigned long)ctx.vib_stability_counter, STABILITY_REQUIRED,
+                        result.peak_frequencies[0], result.peak_displacements[0],
+                        (result.peak_count > 1) ? result.peak_frequencies[1]  : 0.0f,
+                        (result.peak_count > 1) ? result.peak_displacements[1] : 0.0f);
                 }
             }
 
-            float top_freq  = 0.0f;
-            float top_disp  = 0.0f;
-            float top_freq2 = 0.0f;
-            float top_disp2 = 0.0f;
+            float top_freq = 0.0f;
+            float top_disp = 0.0f;
 
-            /* ---- Peak 1: frequency-proximity tracking ----
-             * The Acconeer API sorts peaks by displacement amplitude, so the
-             * same physical frequency can appear at different array indices
-             * as the fork decays.  We track by proximity to the last known
-             * frequency instead of always taking index 0. */
+            /* ---- Simple dominant-peak tracking (active) ---- */
             if (result.peak_count > 0) {
-                /* Find the peak closest to our last known frequency */
-                uint8_t idx1 = 0;
-                if (ctx.vib_prev_freq > 0.0f) {
-                    float best_dist = 1e9f;
-                    for (uint8_t i = 0; i < result.peak_count; i++) {
-                        float d = fabsf(result.peak_frequencies[i] - ctx.vib_prev_freq);
-                        if (d < best_dist) { best_dist = d; idx1 = i; }
-                    }
-                    /* If nothing within 10 Hz, a new dominant source appeared –
-                     * fall back to the highest-amplitude peak and restart. */
-                    if (best_dist > 10.0f) {
-                        idx1 = 0;
-                        ctx.vib_stability_counter = 0;
-                    }
-                }
-
-                float f1 = result.peak_frequencies[idx1];
-                float d1 = result.peak_displacements[idx1];
+                float f1 = result.peak_frequencies[0];
+                float d1 = result.peak_displacements[0];
 
                 if (fabsf(f1 - ctx.vib_prev_freq) < STABILITY_THRESHOLD)
                     ctx.vib_stability_counter++;
@@ -401,74 +378,48 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
                 ctx.vib_stability_counter = 0;
             }
 
-            /* ---- Peak 2: search ALL peaks for the best independent candidate ----
-             * Picks the highest-displacement peak that is:
-             *   (a) not within 10 Hz of peak 1 (avoids same-source duplicates), and
-             *   (b) not a near-integer harmonic of peak 1.
-             * Uses the same proximity tracking to survive amplitude-rank swaps. */
-            if (top_freq > 0.0f && result.peak_count > 1) {
-                /* Find highest-amplitude peak that isn't peak 1 */
-                int    idx2   = -1;
-                float  best_d = 0.0f;
-                for (uint8_t i = 0; i < result.peak_count; i++) {
-                    if (fabsf(result.peak_frequencies[i] - top_freq) < 10.0f) continue;
-                    if (result.peak_displacements[i] > best_d) {
-                        best_d = result.peak_displacements[i];
-                        idx2   = i;
+            /* ---- Frequency-proximity tracking (commented out) ----
+             * Fixes stability-counter resets caused by amplitude-rank swaps: the
+             * Acconeer API sorts peaks by displacement, so the same physical
+             * frequency can move between peak[0]/peak[1] as the fork decays.
+             * Re-enable if stab=0 instability is observed in the VIB RAW log.
+#if 0
+            if (result.peak_count > 0) {
+                uint8_t idx = 0;
+                if (ctx.vib_prev_freq > 0.0f) {
+                    float best_dist = 1e9f;
+                    for (uint8_t i = 0; i < result.peak_count; i++) {
+                        float d = fabsf(result.peak_frequencies[i] - ctx.vib_prev_freq);
+                        if (d < best_dist) { best_dist = d; idx = i; }
                     }
+                    if (best_dist > 10.0f) { idx = 0; ctx.vib_stability_counter = 0; }
                 }
-
-                if (idx2 >= 0) {
-                    float f2 = result.peak_frequencies[idx2];
-                    float d2 = result.peak_displacements[idx2];
-
-                    /* Harmonic rejection: discard if f2 ≈ N×f1 for integer N (±5 %) */
-                    float ratio   = f2 / top_freq;
-                    float nearest = roundf(ratio);
-                    bool  is_harmonic = (nearest >= 1.0f &&
-                                         fabsf(ratio - nearest) < 0.05f * nearest);
-
-                    if (!is_harmonic) {
-                        /* Reset peak-2 tracker if the candidate jumped more than 10 Hz */
-                        if (ctx.vib_prev_freq2 > 0.0f &&
-                            fabsf(f2 - ctx.vib_prev_freq2) > 10.0f) {
-                            ctx.vib_stability_counter2 = 0;
-                        }
-                        if (fabsf(f2 - ctx.vib_prev_freq2) < STABILITY_THRESHOLD)
-                            ctx.vib_stability_counter2++;
-                        else
-                            ctx.vib_stability_counter2 = 0;
-                        ctx.vib_prev_freq2 = f2;
-
-                        if (ctx.vib_stability_counter2 >= STABILITY_REQUIRED && d2 > 5.0f) {
-                            top_freq2 = f2;
-                            top_disp2 = d2;
-                        }
-                    } else {
-                        ctx.vib_stability_counter2 = 0;
-                        ctx.vib_prev_freq2 = 0.0f;
-                    }
-                } else {
-                    /* No independent second peak found this frame */
-                    ctx.vib_stability_counter2 = 0;
+                float f1 = result.peak_frequencies[idx];
+                float d1 = result.peak_displacements[idx];
+                if (fabsf(f1 - ctx.vib_prev_freq) < STABILITY_THRESHOLD)
+                    ctx.vib_stability_counter++;
+                else
+                    ctx.vib_stability_counter = 0;
+                ctx.vib_prev_freq = f1;
+                if (ctx.vib_stability_counter >= STABILITY_REQUIRED && d1 > 5.0f) {
+                    top_freq = f1;
+                    top_disp = d1;
                 }
             } else {
-                ctx.vib_stability_counter2 = 0;
+                ctx.vib_stability_counter = 0;
             }
+#endif
+             * ---- end proximity tracking ---- */
 
             /* ---- Emit BLE update ---- */
-            bool any_stable = (top_freq > 0.0f);
-            if (any_stable) {
-                LOG_INFO_APP("[FILTERED VIB] Peak1=%.2f Hz / %.2f um  Peak2=%.2f Hz / %.2f um\r\n",
-                             top_freq, top_disp, top_freq2, top_disp2);
-                VIBRATION_APP_UpdateData(top_freq, top_disp, top_freq2, top_disp2);
-                ctx.vib_was_stable  = true;
-                ctx.vib_was_stable2 = (top_freq2 > 0.0f);
-            } else if (ctx.vib_was_stable || ctx.vib_was_stable2) {
-                /* All peaks gone – send a single zero-clear frame */
-                VIBRATION_APP_UpdateData(0.0f, 0.0f, 0.0f, 0.0f);
-                ctx.vib_was_stable  = false;
-                ctx.vib_was_stable2 = false;
+            if (top_freq > 0.0f) {
+                LOG_INFO_APP("[FILTERED VIB] Freq=%.2f Hz / Disp=%.2f um\r\n",
+                             top_freq, top_disp);
+                VIBRATION_APP_UpdateData(top_freq, top_disp);
+                ctx.vib_was_stable = true;
+            } else if (ctx.vib_was_stable) {
+                VIBRATION_APP_UpdateData(0.0f, 0.0f);
+                ctx.vib_was_stable = false;
             }
         }
     } else if (mode == RADAR_MODE_VITAL || mode == RADAR_MODE_FALL) {
@@ -517,15 +468,18 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
                 }
             }
         } else {
-            if (ctx.tracked_index != -1) {
+            if (ctx.det_phase == DET_MEASURING && ctx.tracked_index != -1) {
                 ctx.missing_target_count++;
                 if (ctx.missing_target_count > (uint32_t)(10.0f * RADAR_FRAME_RATE)) {
                     ctx.tracked_index        = -1;
                     ctx.ema_dist             = 0.0f;
                     ctx.missing_target_count = 0;
+                    ctx.det_phase            = DET_SEARCHING;
+                    LOG_INFO_APP("[System] Target lost (timeout), returning to search...\r\n");
                 }
-            } else {
-                ctx.ema_dist = 0.0f;
+            } else if (ctx.det_phase == DET_SEARCHING) {
+                ctx.tracked_index = -1;
+                ctx.ema_dist      = 0.0f;
             }
         }
 
@@ -558,55 +512,94 @@ bool Radar_Adapter_Process(Radar_Mode_t mode) {
         }
 
         /* --- Main state machine --- */
-        if (ctx.tracked_index != -1) {
-            float raw_dist = RANGE_START + ctx.tracked_index * step_length;
-            if (ctx.ema_dist == 0.0f) ctx.ema_dist = raw_dist;
-            else ctx.ema_dist = 0.15f * raw_dist + 0.85f * ctx.ema_dist;
+        if (ctx.det_phase == DET_COARSE) {
+            for (int c = 0; c < ctx.n_candidates; c++) {
+                float ua = update_phase(&result, ctx.presence_num_points, spf,
+                                        ctx.candidate_bins[c],
+                                        &ctx.cand_prev_angle[c],
+                                        &ctx.cand_first_phase[c],
+                                        &ctx.cand_unwrapped[c],
+                                        NULL);
+                vital_signs_coarse_feed(c, ua);
+            }
+            if (vital_signs_coarse_tick()) {
+                int best = vital_signs_coarse_pick_best(ctx.n_candidates);
+                if (best >= 0) {
+                    ctx.tracked_index        = ctx.candidate_bins[best];
+                    ctx.prev_angle           = ctx.cand_prev_angle[best];
+                    ctx.unwrapped_angle      = ctx.cand_unwrapped[best];
+                    ctx.first_phase          = false;
+                    ctx.phase_renorm_counter = 0;
+                    ctx.det_phase            = DET_MEASURING;
+                    vital_signs_init();
+                    vital_signs_replay_coarse(best);
+                    
+                    float raw_dist = RANGE_START + ctx.tracked_index * step_length;
+                    ctx.ema_dist   = raw_dist;
+                    
+                    LOG_INFO_APP("[System] Coarse done! Best dist %.2fm, switching to fine mode\r\n", raw_dist);
+                } else {
+                    LOG_INFO_APP("[System] Coarse failed, searching again\r\n");
+                    ctx.tracked_index = -1;
+                    ctx.ema_dist      = 0.0f;
+                    ctx.det_phase     = DET_SEARCHING;
+                }
+            }
+
+        } else if (ctx.det_phase == DET_MEASURING && ctx.tracked_index != -1) {
+            /* --- Sub-bin distance tracking using energy centroid --- */
+            float s_lo = (ctx.tracked_index > 0)
+                ? result.depthwise_inter_presence_scores[ctx.tracked_index - 1] : 0.0f;
+            float s_ce = result.depthwise_inter_presence_scores[ctx.tracked_index];
+            float s_hi = (ctx.tracked_index < (int)result.depthwise_presence_scores_length - 1)
+                ? result.depthwise_inter_presence_scores[ctx.tracked_index + 1] : 0.0f;
+
+            float sum_s = s_lo + s_ce + s_hi + 0.001f;
+            float offset = (s_hi - s_lo) / sum_s; // Range approx -1.0 to +1.0
+
+            if (offset > 0.4f && s_hi > 2.0f) {
+                ctx.tracked_index++;
+                ctx.first_phase = true;
+                offset = 0.0f;
+            } else if (offset < -0.4f && s_lo > 2.0f) {
+                ctx.tracked_index--;
+                ctx.first_phase = true;
+                offset = 0.0f;
+            } else {
+                if (offset >  0.5f) offset =  0.5f;
+                if (offset < -0.5f) offset = -0.5f;
+            }
+
+            float raw_dist = RANGE_START + (ctx.tracked_index + offset) * step_length;
+
+            if (ctx.ema_dist == 0.0f) {
+                ctx.ema_dist = raw_dist;
+            } else {
+                ctx.ema_dist = 0.05f * raw_dist + 0.95f * ctx.ema_dist; // Strong low-pass smoothing
+            }
+
             float current_dist = ctx.ema_dist;
 
-            if (ctx.det_phase == DET_COARSE) {
-                for (int c = 0; c < ctx.n_candidates; c++) {
-                    float ua = update_phase(&result, ctx.presence_num_points, spf,
-                                            ctx.candidate_bins[c],
-                                            &ctx.cand_prev_angle[c],
-                                            &ctx.cand_first_phase[c],
-                                            &ctx.cand_unwrapped[c]);
-                    vital_signs_coarse_feed(c, ua);
-                }
-                if (vital_signs_coarse_tick()) {
-                    int best = vital_signs_coarse_pick_best(ctx.n_candidates);
-                    if (best >= 0) {
-                        ctx.tracked_index        = ctx.candidate_bins[best];
-                        ctx.prev_angle           = ctx.cand_prev_angle[best];
-                        ctx.unwrapped_angle      = ctx.cand_unwrapped[best];
-                        ctx.first_phase          = false;
-                        ctx.phase_renorm_counter = 0;
-                        ctx.det_phase            = DET_MEASURING;
-                        vital_signs_init();
-                        vital_signs_replay_coarse(best);
-                        LOG_INFO_APP("[System] Coarse done! Best dist %.2fm, switching to fine mode\r\n",
-                                     RANGE_START + ctx.tracked_index * step_length);
-                    } else {
-                        LOG_INFO_APP("[System] Coarse failed, searching again\r\n");
-                        ctx.tracked_index = -1;
-                        ctx.ema_dist      = 0.0f;
-                        ctx.det_phase     = DET_SEARCHING;
-                    }
-                }
-
-            } else if (ctx.det_phase == DET_MEASURING) {
-                if (++ctx.phase_renorm_counter >= (uint32_t)(600.0f * RADAR_FRAME_RATE)) {
-                    ctx.first_phase          = true;
-                    ctx.phase_renorm_counter = 0;
-                    vital_signs_init();
-                }
-
-                update_phase(&result, ctx.presence_num_points, spf, ctx.tracked_index,
-                             &ctx.prev_angle, &ctx.first_phase, &ctx.unwrapped_angle);
-
-                process_vital_signs(ctx.unwrapped_angle, current_dist);
-                process_fall_detection(result.intra_presence_score, current_dist);
+            if (++ctx.phase_renorm_counter >= (uint32_t)(600.0f * RADAR_FRAME_RATE)) {
+                ctx.first_phase          = true;
+                ctx.phase_renorm_counter = 0;
+                vital_signs_init();
             }
+
+            float coherence = 0.0f;
+            update_phase(&result, ctx.presence_num_points, spf, ctx.tracked_index,
+                         &ctx.prev_angle, &ctx.first_phase, &ctx.unwrapped_angle, &coherence);
+
+            process_vital_signs(ctx.unwrapped_angle, current_dist);
+        }
+
+        /* --- Fall detection (runs every frame regardless of phase-lock state) --- */
+        if (mode == RADAR_MODE_FALL) {
+            float fall_dist = (ctx.det_phase == DET_MEASURING && ctx.tracked_index != -1)
+                ? ctx.ema_dist
+                : result.presence_distance;
+
+            process_fall_detection(result.intra_presence_score, fall_dist);
         }
     }
     
@@ -637,12 +630,9 @@ void Radar_Adapter_Stop(void) {
     if (ctx.processing) { acc_processing_destroy(ctx.processing); ctx.processing = NULL; }
     if (ctx.buffer) { acc_integration_mem_free(ctx.buffer); ctx.buffer = NULL; }
     
-    ctx.vib_stability_counter  = 0;
-    ctx.vib_prev_freq          = 0.0f;
-    ctx.vib_was_stable         = false;
-    ctx.vib_stability_counter2 = 0;
-    ctx.vib_prev_freq2         = 0.0f;
-    ctx.vib_was_stable2        = false;
+    ctx.vib_stability_counter = 0;
+    ctx.vib_prev_freq         = 0.0f;
+    ctx.vib_was_stable        = false;
     
     /* --- Mode-Specific Handle Destruction --- */
     if (ctx.vib_handle) { acc_vibration_handle_destroy(ctx.vib_handle); ctx.vib_handle = NULL; }

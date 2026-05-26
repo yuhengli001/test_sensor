@@ -7,6 +7,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "main.h"
+#include "vital_sign_service_app.h"
+
+
 #include "acc_algorithm.h"
 #include "acc_definitions_a121.h"
 #include "acc_integration_log.h"
@@ -882,6 +886,9 @@ void process_vital_signs(float difference, float current_dist)
 
 	float smooth_b = compute_median5(bpm_b_hist, bpm_b_hist_cnt);
 	float smooth_h = compute_median5(bpm_h_hist, bpm_h_hist_cnt);
+
+	bool h_ok = (snr_h > 2.0f);
+	VITAL_APP_UpdateData(smooth_b, h_ok ? smooth_h : 0.0f, current_dist);
 
 	printf("[Vitals] Dist: %" PRIfloat "m | Resp: %" PRIfloat " BPM (SNR: %d) | Heart: %" PRIfloat " BPM (SNR: %d)\n",
 	       ACC_LOG_FLOAT_TO_INTEGER(current_dist),

@@ -66,9 +66,6 @@ typedef struct __PACKED
   float velocity_rms;     /* mm/s (RMS) */
   float acceleration;     /* m/s^2 (peak) */
   float acceleration_rms; /* m/s^2 (RMS) */
-  /* --- Peak 2 (second dominant, 0.0 if absent or harmonic of peak 1) --- */
-  float frequency2;       /* Hz */
-  float displacement2;    /* um (peak) */
 } VIBRATION_Data_t;
 
 typedef struct __PACKED
@@ -101,7 +98,7 @@ typedef struct __PACKED
 void VIBRATION_SERVICE_APP_Init(void);
 void VIBRATION_SERVICE_APP_EvtRx(VIBRATION_SERVICE_APP_ConnHandleNotEvt_t *p_Notification);
 /* USER CODE BEGIN EFP */
-void VIBRATION_APP_UpdateData(float freq, float displ, float freq2, float displ2);
+void VIBRATION_APP_UpdateData(float freq, float displ);
 VIBRATION_Config_t* VIBRATION_APP_GetConfig(void);
 /* USER CODE END EFP */
 
