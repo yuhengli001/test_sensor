@@ -8,3 +8,4 @@ mx.scratch
 .clangd
 .DS_Store
 Notes
+.gradle/
