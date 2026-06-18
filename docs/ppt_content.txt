@@ -1,0 +1,753 @@
+
+--- ppt/slides/slide1.xml ---
+MIL
+L
+IM
+E
+TER
+ 
+WAVE
+ 
+DETECTIO
+N
+16
+ 
+June
+ 202
+6
+Team member:
+Haohan X
+u
+ 1512074
+Yuheng Li 1569107 
+Dongfang Lyu 1444967
+Superviser:
+Margreta Kuijper
+Sean Meng
+
+--- ppt/slides/slide2.xml ---
+Content
+Part 1 
+Introduction
+Part 2 
+Overview
+Part 3 
+Hardware
+ 
+and firmware Design 
+Part 
+4
+ Algorithm
+Part 5 Mechanical Design 
+Part 
+6
+ Conclusion
+2
+
+--- ppt/slides/slide3.xml ---
+Part 1
+ 
+Introduction
+ 
+
+--- ppt/slides/slide4.xml ---
+I
+n
+trod
+u
+c
+tion
+Accurately monitoring environmental factors and human health indicators without physical contact is crucial in fields such as industrial predictive maintenance, non wearable health tracking, and elderly care.
+Traditional sensors
+Contact/wearable:  deployment difficulties, discomfort during prolonged wear, 
+and privacy concerns.
+4
+
+--- ppt/slides/slide5.xml ---
+Introduction
+Innovative solution for this project
+Adopting 
+Acconeer
+ A121 60.5 GHz pulse coherent radar sensor
+Compact size
+Low power consumption
+ 
+mmWave
+ frequency band, capable of completely non-contact detection
+ 
+ Design and implement a complete end-to-end sensing solution
+5
+
+--- ppt/slides/slide6.xml ---
+Part 
+2 Overview
+ 
+
+--- ppt/slides/slide7.xml ---
+Overview
+7
+
+--- ppt/slides/slide8.xml ---
+Part 
+3
+ Hardware
+ and Firmware Design
+
+--- ppt/slides/slide9.xml ---
+Hardware Design Process
+Risk driven design process 
+Official documentation guided design process
+Iterative design process
+Make design as simple as possible but meet design specifications
+9
+
+--- ppt/slides/slide10.xml ---
+Hardware Design Flow
+Development board evaluation 
+mmWave sensor development board (Acconeer XE125)
+MCU with BLE development board (STM32WBA65I-DK1)
+Build a first prototype using development boards 
+Component Selection
+MCU and radar sensor
+Power domain related components 
+(voltage regulators, charging IC)
+Communication interface (USB connector, USB-UART converter)
+Debug interface (SWD)
+Passive components (crystal, capacitor, resistor)
+10
+
+--- ppt/slides/slide11.xml ---
+Hardware Architecture 
+11
+
+--- ppt/slides/slide12.xml ---
+Hardware Design Flow
+Schematic capture and verification 
+Layout and Design Rule Check 
+Production
+Assembly 
+Test and debug 
+12
+
+--- ppt/slides/slide13.xml ---
+Firmware Design Process
+Two Choices 
+Bare-metal programming 
+HAL (Hardware Abstraction Layer) 
+CubeMX
+ 
+S
+etup
+Connectivity (SPI, UART)
+System Core (DMA, Interrupt, …)
+System Clock
+BLE
+…
+BLE  Configuration 
+13
+
+--- ppt/slides/slide14.xml ---
+BLE Configuration
+Start with official tutorial then adapt to our application
+BLE services and characteristics
+Four services (control, vital sign, fall, vibration)
+Several characteristics are defined for each service
+14
+
+--- ppt/slides/slide15.xml ---
+Firmware Architecture
+15
+STM32 firmware boot sequence executing within 
+main.c
+ 
+
+--- ppt/slides/slide16.xml ---
+System Integration 
+radar_adaptor.c
+ as the main control hub to coordinate BLE and sensor tasks
+Wrap low level functions in A121 SDK into several functions (APIs)
+bool
+ 
+Radar_Adapter_Init
+(
+void
+);
+bool
+ 
+Radar_Adapter_Start
+(
+Radar_Mode_t
+ 
+mode
+);
+static
+ 
+bool
+ 
+init_vibration
+(
+void
+);
+static
+ 
+bool
+ 
+init_presence
+(
+void
+);
+bool
+ 
+Radar_Adapter_Process
+(
+Radar_Mode_t
+ 
+mode
+);
+void
+ 
+Radar_Adapter_Stop
+(
+void
+);
+static
+ 
+bool
+ 
+do_sensor_calibration_and_prepare
+(
+…
+);
+ 
+16
+
+--- ppt/slides/slide17.xml ---
+Part 
+4
+ 
+Algorithm
+
+--- ppt/slides/slide18.xml ---
+Code
+ 
+Scope
+ 
+and M
+odul
+e
+ 
+Struct
+ur
+e
+Section Scope
+This section focuses on embedded firmware and algorithm-level implementation.
+The main implemented modules include radar data acquisition, target tracking, vital-sign processing, and output handling.
+Hardware design, lens design, and mobile UI are covered in other sections.
+Fall detection is included only as a designed state-machine prototype, not as a fully validated final function.
+18
+
+--- ppt/slides/slide19.xml ---
+M
+ain 
+Loop
+ and 
+Rea
+l
+-
+ti
+me 
+Execu
+tion
+Main Loop Design
+Initialize radar detector once at start-up
+Process one radar frame per loop iteration
+Run BLE / WPAN task processing in the same loop
+Avoids a blocking radar-only execution flow
+19
+
+--- ppt/slides/slide20.xml ---
+Radar SDK Wrapper
+Key Functions
+Radar_Sensor_PreInit() 
+registers HAL and creates detector 
+resources
+Radar_Sensor_Start() 
+powers on A121 and runs 
+calibration
+Radar_Sensor_Get_Next_Results() 
+measures one frame 
+and returns distance results
+Radar_Sensor_UpdateParam()
+updates radar configuration 
+parameters
+Radar_Sensor_Stop()
+disables the sensor and stops 
+measurement
+Radar SDK Wrapper
+Wraps Acconeer A121 distance detector into reusable firmware functions
+Handles HAL registration, sensor configuration, calibration, and measurement
+Separates low-level SDK calls from application-level processing
+Provides stable distance and signal-strength outputs for later modules
+20
+
+--- ppt/slides/slide21.xml ---
+Target Tracking Filter
+Tracking Logic
+Filter raw distance results by valid range and signal strength
+Select the closest valid target as the main subject
+Lock the target and search within a tracking gate
+Smooth the distance output using an update factor
+Release the lock if the target is lost for several frames
+Key Parameters
+：
+track_min_dist
+track_max_dist
+track_strength_thr
+track_gate
+track_alpha
+track_max_lost_frames
+21
+
+--- ppt/slides/slide22.xml ---
+Vital Signs Processing Pipeline
+Processing Logic
+Uses unwrapped phase from the locked range bin as input
+Applies high-pass filtering to remove slow drift
+Separates respiration and heartbeat into different frequency bands
+Uses LMS adaptive cancellation to reduce breathing interference
+Stores filtered samples for later FFT-based BPM estimation
+22
+
+--- ppt/slides/slide23.xml ---
+Vital Signs Processing Pipeline
+Vital Signs Processing Code
+This code processes the unwrapped phase signal
+from the locked radar range bin.
+apply_hp()
+ removes slow drift and DC offset from the phase signal.
+apply_butterworth_b()
+ 
+extracts the respiration component in the lower frequency band.
+LMS adaptive cancellation is used to reduce breathing interference before heart-rate extraction.
+apply_butterworth_h()
+ 
+extracts the heartbeat component in the higher frequency band.
+The filtered signals are stored for later FFT-based BPM estimation.
+23
+
+--- ppt/slides/slide24.xml ---
+FFT and Output Stabilisation
+Output Stabilisation
+Apply Hamming window before FFT to reduce spectral leakage
+Use zero-padding to improve frequency resolution
+Smooth PSD values to reduce frame-to-frame noise
+Use Gaussian peak interpolation for more accurate peak frequency estimation
+Apply frequency tracking and 5-sample median filtering to stabilise BPM output
+24
+
+--- ppt/slides/slide25.xml ---
+Fall Detection Design
+Design Logic（
+Prototype
+ 
+only
+）
+Detect a possible fall using motion intensity
+Store the pre-fall subject distance
+Enter a suspected state after sustained impact
+Confirm a fall if the subject remains displaced for a set period
+Cancel the suspected state if the subject recovers, moves strongly, or times out
+25
+
+--- ppt/slides/slide26.xml ---
+Code Contribution Summary
+Implemented Contributions
+Built the main firmware execution flow
+Integrated radar frame processing with BLE / WPAN task handling
+Wrapped Acconeer A121 SDK functions into a reusable radar control layer
+Added target tracking to stabilise distance outputs
+Implemented phase-based vital-sign signal processing
+Converted filtered signals into stable breathing-rate and heart-rate estimates
+Prototype / Future Work
+Fall detection was designed as a state-machine prototype
+Full integration with the final sensing workflow was not completed
+Experimental validation of fall detection remains future work
+Further optimisation is needed for motion artefacts and real-world robustness
+26
+
+--- ppt/slides/slide27.xml ---
+Part 
+5
+ 
+Mechanical Design
+
+--- ppt/slides/slide28.xml ---
+Beyond Protection
+Geometric structure directly affects electromagnetic focusing characteristics
+Goal: Improve antenna 
+directionality+enhance
+ received signal strength
+From: Lens design — 
+Acconeer
+ docs
+28
+
+--- ppt/slides/slide29.xml ---
+Fresnel Zone Plate (FZP)
+FZP: Ladder structure, thickness does not increase with radius
+Traditional lenses: thicker with larger aperture → Injection defects (shrinkage marks)
+FZP advantages: flat, easy to manufacture, suitable for compact equipment
+29
+
+--- ppt/slides/slide30.xml ---
+Theoretical Design
+Center frequency of 60 GHz                     Material: PLA
+Free-Space Wavelength                           Equivalent relative dielectric constant
+Wavelength in Medium
+Initial Focal Length
+Design Diameter
+Ratio                                                                                   traditional design rate: 0.3~0.6
+30
+
+--- ppt/slides/slide31.xml ---
+From Theory to Experiment
+Affected by standing waves: 
+Experimental optimal air gap: 
+6 mm         3.5 mm
+Total thickness of the 4-layer steps
+Physical testing is still required, 
+as long slots without fixed points were used
+31
+
+--- ppt/slides/slide32.xml ---
+Mechanical Integration & Assembly
+Parametric
+ CAD Modeling
+Lens-to-sensor spacing defined as adjustable parameter
+Enables rapid iteration while maintaining dimensional consistency
+Critical for optimizing beam focusing characteristics at 60 GHz
+Interference
+ Check
+Import completed PCB STEP model into CAD environment
+Verify clearance between housing and all components before manufacturing
+Reduces mechanical integration errors and accelerates prototyping
+Final Assembly
+FZP lens integrated with 3D-printed housing
+A121 radar module and PCB precisely positioned
+Compact form factor suitable for portable healthcare applications
+32
+
+--- ppt/slides/slide33.xml ---
+Material Trade-off: PA12 vs PLA
+PA12:
+ε
+r
+ ≈ 2.6
+Ultra-low loss (<0.005) 
+Sharp focusing
+Tough, high temp stable
+PLA:
+ε
+r
+ ≈ 2.6 (effective) 
+Higher loss (0.01–0.02)
+Beam broadening 
+Brittle, Tg~60°C 
+33
+It seems that PA12 is all about advantages
+However, some characteristics of PLA are in line with our needs
+Heart Rate!
+
+--- ppt/slides/slide34.xml ---
+Lens Impact
+  
+Test signal: 341.3 Hz tuning fork
+Target alignment: Rigidly clamped at fixed height, perfectly aligned with radar line-of-sight
+Metric: Maximum reliable detection distance
+                                             
+                                            Improvement: +100%
+34
+
+--- ppt/slides/slide35.xml ---
+Part 
+6
+ 
+Results & Conclusion
+
+--- ppt/slides/slide36.xml ---
+Conclusion
+ 
+Core Achievement:
+Full-Stack Integration: Successful development of an end-to-end 60 GHz 
+mmWave
+ radar platform (Hardware, Firmware, and iOS App).
+Ultra-Low Power: Achieved < 1 µA idle current through hardware power gating and RTOS-based task scheduling.
+High-Precision DSP: Validated multiple sensing modes
+Range Enhancement: Doubled the stable sensing distance (from 0.3m to 0.6m) using a custom 3D-printed FZP dielectric lens.
+36
+
+--- ppt/slides/slide37.xml ---
+Conclusion
+ 
+Core Achievement:
+Full-Stack Integration: Successful development of an end-to-end 60 GHz 
+mmWave
+ radar platform (Hardware, Firmware, and iOS App).
+Ultra-Low Power: Achieved < 1 µA idle current through hardware power gating and RTOS-based task scheduling.
+High-Precision DSP: Validated multiple sensing modes
+Range Enhancement: Doubled the stable sensing distance (from 0.3m to 0.6m) using a custom 3D-printed FZP dielectric lens.
+37
+
+--- ppt/slides/slide38.xml ---
+Future Directions
+ 
+Further improve the fall algorithm and enhance its functionality to enable use in regular indoor environments
+Use chips with more transmission and reception capabilities, or connect multiple chips in parallel, to enable detection of multiple objects
+Optimize the casing 
+t
+o
+ 
+achieve
+ 
+practical
+ity
+ 
+and
+ 
+aesthetic
+s,
+ 
+and
+ 
+design
+ co
+rresponding
+ 
+le
+nse
+s
+ 
+base
+d
+ 
+on
+ 
+the
+ 
+above
+ 
+e
+x
+p
+ansi
+o
+n
+ 
+sc
+en
+ario
+s
+38
+
+--- ppt/slides/slide39.xml ---
+References
+ 
+Acconeer AB. (n.d.). 
+A121 - Pulsed coherent radar (PCR) datasheet 
+(v1.8). Retrieved from 
+https://developer.acconeer.com/
+ 
+Acconeer AB. (n.d.). 
+Entry+ module EVK hardware user guide - XE125
+. Retrieved from 
+https://developer.acconeer.com/
+ 
+Acconeer AB. (n.d.). 
+Entry+ module XM125 datasheet 
+(v1.2). Retrieved from 
+https://developer.acconeer.com/
+ 
+Acconeer AB. (n.d.). 
+Hardware and physical integration guideline PCR sensors A111 & A121
+. Retrieved from 
+https://developer.acconeer.com/
+ 
+Acconeer AB. (n.d.). 
+XM125 software user guide
+. Retrieved from 
+https://developer.acconeer.com/
+ 
+Onsemi. (n.d.). 
+NCP167 700 mA, ultra-low noise and high PSRR LDO regulator datasheet
+. Retrieved from 
+https://www.onsemi.com/
+ 
+Silicon Laboratories. (n.d.). 
+CP2105 single-chip USB to dual UART bridge datasheet
+. Retrieved from 
+https://www.silabs.com/
+ 
+STMicroelectronics. (2025). 
+STM32WBA6xxx datasheet 
+(DS14736 Rev 3). Retrieved from 
+https://www.st.com/
+ 
+STMicroelectronics. (n.d.). 
+AN5042 application note: How to calibrate the HSE clock for RF applications on 
+STM32 wireless MCUs
+. Retrieved from 
+https://www.st.com/
+ 
+39
+
+--- ppt/slides/slide40.xml ---
+References
+ 
+STMicroelectronics. (n.d.). 
+AN5948 application note: How to develop RF hardware using STM32WBA MCUs
+. 
+Retrieved from 
+https://www.st.com/
+ 
+STMicroelectronics. (n.d.). 
+MLPF-WB-04D3: 2.4 GHz low pass filter matched to STM32WB datasheet
+. 
+Retrieved from 
+https://www.st.com/
+ 
+STMicroelectronics. (n.d.). 
+RM0515 reference manual: STM32WBA6xxx advanced Arm®-based 32-bit MCUs
+. 
+Retrieved from 
+https://www.st.com/
+ 
+Texas Instruments. (n.d.). 
+BQ25176 800-mA linear battery charger datasheet
+. Retrieved from 
+https://www.ti.com/
+ 
+Hu, H., Huang, H., Li, M., Gao, X., Yin, L., Qi, R., Wu, R. S., Chen, X., Ma, Y., Shi, K., Li, C., Maus, T. M., 
+Huang, B. K., Lu, C., Lin, M., Zhou, S., Lou, Z., Gu, Y., Chen, Y., ... Xu, S. (2023). A wearable cardiac 
+ultrasound imager. 
+Nature
+. 
+https://doi.org/10.1038/s41586-022-05498-z
+ 
+Ikram, M. Z., Ahmad, A., & Wang, D. (2018). 
+High-accuracy distance measurement using millimeter-wave 
+radar
+. 
+Kenny, J. S. (2024). Wearable ultrasound for continuous deep-tissue monitoring. 
+Nature Biotechnology
+. 
+https://doi.org/10.1038/s41587-023-02098-8
+ 
+La, T., & Le, L. H. (2022). Flexible and wearable ultrasound device for medical applications: A review on 
+materials, structural designs, and current challenges. 
+Advanced Materials Technologies
+. 
+https://doi.org/10.1002/admt.202100798
+ 
+40
+
+--- ppt/slides/slide41.xml ---
+References
+ 
+Lin, M., Zhang, Z., Gao, X., Bian, Y., Wu, R. S., Park, G., Lou, Z., Zhang, Z., Xu, X., Chen, X., Kang, A., 
+Yang, X., Yue, W., Yin, L., Wang, C., Qi, B., Zhou, S., Hu, H., Huang, H., ... Xu, S. (2023). A fully integrated 
+wearable ultrasound system to monitor deep tissues in moving subjects. 
+Nature Biotechnology
+. 
+https://doi.org/10.1038/s41587-023-01800-0
+Pietrangelo, S. J., Lee, H., & Sodini, C. G. (2018). A wearable transcranial Doppler ultrasound phased array 
+system. 
+Acta 
+Neurochirurgica
+. Supplement
+. 
+https://doi.org/10.1007/978-3-319-65798-1_24
+ 
+Steinberg, S., Huang, A., Ono, Y., & Rajan, S. (2022). Continuous artery monitoring using a flexible and 
+wearable single-element ultrasonic sensor. 
+IEEE Instrumentation & Measurement Magazine
+. 
+https://doi.org/10.1109/MIM.2022.9720952
+ 
+Thainthadaphat
+, P., 
+Leeprechanon
+, N., 
+Chandarasupsang
+, T., & 
+Tananchana
+, A. (2026). Regulatory pathways for 
+smarter and flexible electricity network in Thailand: Enabling flexibility through DSO development. 
+The 
+Electricity Journal
+. 
+https://doi.org/10.1016/j.tej.2026.107544
+ 
+Vostrikov
+, S., Ingolfsson, T. M., 
+Hafthorsdottir
+, S., Leitner, C., Magno, M., Benini, L., & 
+Cossettini
+, A. (2023). 
+A muscle 
+pennation
+ angle estimation framework from raw ultrasound data for wearable biomedical 
+instrumentation. 
+IEEE Transactions on Instrumentation and Measurement
+. 
+https://doi.org/10.1109/TIM.2023.3335535
+ 
+Wang, F., Jin, P., Feng, Y., Fu, J., Wang, P., Liu, X., Zhang, Y., Ma, Y., Yang, Y., Yang, A., & Feng, X. (2021). 
+Flexible Doppler ultrasound device for the monitoring of blood flow velocity. 
+Science Advances
+. 
+https://doi.org/10.1126/sciadv.abi9283
+ 
+41
+
+--- ppt/slides/slide42.xml ---
+References
+ 
+Yang, X., Yan, J., Fang, Y., Zhou, D., & Liu, H. (2020). Simultaneous prediction of wrist/hand motion via 
+wearable ultrasound sensing. 
+IEEE Transactions on Neural Systems and Rehabilitation Engineering
+. 
+https://doi.org/10.1109/TNSRE.2020.2977908
+ 
+Yin, Z., Chen, H., Yang, X., Liu, Y., Zhang, N., Meng, J., & Liu, H. (2022). A wearable ultrasound interface for 
+prosthetic hand control. 
+IEEE Journal of Biomedical and Health Informatics
+. 
+https://doi.org/10.1109/JBHI.2022.3203084
+ 
+Acconeer
+. (2024, December 3). 
+Product brief CH125 40 conical horn antenna
+. 
+Acconeer
+ Developer. 
+https://developer.acconeer.com/download/product-brief-ch125-40-conical-horn-antenna/?tmstv=1780049598
+ 
+Acconeer
+. (2024, February 17). 
+Getting started guide A121 lenses: LH112/120/132/122 
+. 
+Acconeer
+ Developer. 
+https://developer.acconeer.com/download/getting-started-guide-a121-lenses/?tmstv=1780049598
+ 
+Acconeer
+. (2024, February 17). 
+LH112 LH120 LH132 LH122 3D STEP
+. 
+Acconeer
+ Developer. 
+https://developer.acconeer.com/download/lh112_lh120_lh132_lh122-3d-step/?tmstv=1780049598
+42
+
+--- ppt/slides/slide43.xml ---
+Thank you for listening
